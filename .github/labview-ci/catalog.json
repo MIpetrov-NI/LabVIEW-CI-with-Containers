@@ -4612,6 +4612,33 @@
         ]
       },
       "notes": "Build specifications are authored in LabVIEW (Project Explorer > Build Specifications); this capability runs them. Installer and .NET Interop specifications are Windows-only and are skipped on Linux. Runs on the NI base image - no custom image required. Configure which specifications run on the Builds page (config.builds)."
+    },
+    {
+      "id": "sbom-generation",
+      "name": "SBOM Generation",
+      "summary": "Run a LabVIEW SBOM in CI and publish to the dashboard.",
+      "status": "stable",
+      "recommended": false,
+      "supportsOs": [
+        "windows"
+      ],
+      "requires": [],
+      "recommends": [
+        "dashboard",
+        "custom-image"
+      ],
+      "statusContext": "CI / SBOM Generation",
+      "files": {
+        "any": [
+          ".github/labview/build-sbom-report.py"
+        ],
+        "windows": [
+          ".github/workflows/run-sbom-windows-container.yml",
+          ".github/labview/run-sbom.ps1"
+        ],
+        "linux": []
+      },
+      "notes": "Runs the configured LabVIEW SBOM GENERATION headlessly in the Windows worker, Windows-only because the frameworks ship as VIPM packages."
     }
   ]
 }
