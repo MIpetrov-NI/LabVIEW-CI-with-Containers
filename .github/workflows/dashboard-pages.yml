@@ -27,6 +27,7 @@ on:
       - "VI Snapshots and VI Browser"
       - "Build LabVIEW CI Image"
       - "Build LabVIEW CI Image - Linux"
+      - "Run SBOM Generation — Windows Container"
     types: [completed]
   schedule:
     - cron: '0 * * * *'
