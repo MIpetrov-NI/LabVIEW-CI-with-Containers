@@ -1,456 +1,377 @@
 #!/usr/bin/env python3
 """
-build-sbom-report.py - Turn the raw SBOM output into a friendly, navigable
-report that renders inside the CI dashboard chrome.
+build-sbom-report.py — Generates a friendly, navigable Software Bill of Materials (SBOM) 
+report for LabVIEW continuous integration workflows.
 
-SBOM (JKI) generates an Cyclone Compatible document for a LabVIEW project. 
-The runner (run-sbom.ps1) drops that output under <out>/doc and records what 
-it produced in <out>/sbom-meta.json. This
-script wraps it into:
+INPUTS
+    --sbom <file>     Path to an SPDX-compliant sbom.json file.
+                      Default: search inside --results directory for sbom.json.
+    --results <dir>   Directory containing sbom.json (and optional _tooling.json).
 
-    <out>/index.html    - friendly report (the deployed page); embeds the
-                          generated HTML when present, otherwise renders the
-                          generated AsciiDoc client-side (with a raw fallback)
-    <out>/summary.json  - machine-readable status the dashboard / workflow read
-
-It runs on the RUNNER (not in the container), after the doc-gen step, mirroring
-build-analyzer-report.py / build-masscompile-report.py.
-
-Usage:
-    python3 build-sbom-report.py \
-        --in        ci-out/sbom \
-        --out       ci-out/sbom \
-        --platform  windows \
-        [--sha SHA] [--repo owner/name] [--pages-url https://owner.github.io/repo] \
-        [--commit-msg "..."] [--author "..."] [--date 2026-...Z] [--title "..."]
+OUTPUTS
+    <out>/index.html  The deployed HTML report (viewable on dashboard).
+    <out>/results.json The unified model output.
 """
-
 from __future__ import annotations
 
 import argparse
 import html
 import json
-import os
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
-def read_meta(report_dir: Path) -> dict:
-    """Load sbom-meta.json (written by run-sbom.ps1). Missing/!valid -> {}."""
-    for name in ("sbom-meta.json", "summary.json"):
-        p = report_dir / name
-        if p.is_file():
-            try:
-                return json.loads(p.read_text(encoding="utf-8"))
-            except (ValueError, OSError):
-                continue
-    return {}
+# ── SBOM Parsing & Processing ────────────────────────────────────────────────
+def parse_sbom(sbom_path: Path) -> dict:
+    """Parse an SPDX JSON file into a list of standardized package dictionaries."""
+    if not sbom_path.exists():
+        return {"spdx_version": "Unknown", "packages": [], "created": ""}
+
+    try:
+        data = json.loads(sbom_path.read_text(encoding="utf-8-sig"))
+    except Exception as e:
+        return {
+            "spdx_version": "Unknown",
+            "packages": [],
+            "created": "",
+            "parse_error": str(e),
+        }
+
+    raw_packages = data.get("packages", [])
+    packages = []
+    for pkg in raw_packages:
+        if isinstance(pkg, dict):
+            packages.append({
+                "name": str(pkg.get("Name") or pkg.get("name") or "Unknown Package"),
+                "version": str(pkg.get("Version") or pkg.get("version") or "Unknown"),
+                "vendor": str(pkg.get("Vendor") or pkg.get("supplier") or pkg.get("vendor") or "N/A"),
+            })
+
+    return {
+        "spdx_version": data.get("spdxVersion", "SPDX-2.3"),
+        "created": data.get("created", ""),
+        "packages": packages,
+    }
 
 
-def scan_doc(report_dir: Path) -> tuple[str, str, list[str]]:
-    """Inventory <out>/doc. Returns (primary_kind, primary_path, rel_files).
-    primary_path is relative to <out> (e.g. 'doc/Project.adoc')."""
-    doc = report_dir / "doc"
-    if not doc.is_dir():
-        return "none", "", []
-    files = sorted(p for p in doc.rglob("*") if p.is_file())
-    rel = [p.relative_to(report_dir).as_posix() for p in files]
-    htmls = sorted((p for p in files if p.suffix.lower() in (".html", ".htm")),
-                   key=lambda p: p.stat().st_size, reverse=True)
-    adocs = sorted((p for p in files if p.suffix.lower() == ".adoc"),
-                   key=lambda p: p.stat().st_size, reverse=True)
-    if htmls:
-        return "html", htmls[0].relative_to(report_dir).as_posix(), rel
-    if adocs:
-        return "adoc", adocs[0].relative_to(report_dir).as_posix(), rel
-    return "none", "", rel
+def clean(text: str) -> str:
+    return (text or "").strip()
 
 
-_IMG_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp")
+# ── Assemble Model ───────────────────────────────────────────────────────────
+def build_data(args) -> dict:
+    sbom_file = None
+    if args.sbom:
+        sbom_file = Path(args.sbom)
+    elif args.results:
+        candidate = Path(args.results) / "sbom.json"
+        if candidate.exists():
+            sbom_file = candidate
 
+    sbom_data = parse_sbom(sbom_file) if sbom_file else {"spdx_version": "Unknown", "packages": []}
+    packages = sbom_data.get("packages", [])
 
-def _doc_viewer_data(report_dir: Path, rel_files, primary_path):
-    """Work out what the client viewer needs: the main AsciiDoc (the top-level
-    document that pulls the sections together with include::), the include key
-    for each .adoc, the image list, and the imagesdir the deployed page must use.
-    Returns (main_rel, doc_dir, main_key, doc_manifest, img_manifest, images_dir)."""
-    adoc = [r for r in rel_files if r.lower().endswith(".adoc")]
-    imgs = [r for r in rel_files if r.lower().endswith(_IMG_EXTS)]
-
-    def size(r):
+    meta_extra = {}
+    if args.meta and Path(args.meta).exists():
         try:
-            return (report_dir / r).stat().st_size
-        except OSError:
-            return 0
+            meta_extra = json.loads(Path(args.meta).read_text(encoding="utf-8-sig"))
+        except Exception:
+            meta_extra = {}
 
-    # Prefer a top-level document (one segment below the doc root) that actually
-    # has include:: directives; else the largest top-level doc; else the primary.
-    tops = [r for r in adoc if r.count("/") == 1]
-    main_rel = ""
-    for r in sorted(tops or adoc, key=lambda x: -size(x)):
-        try:
-            if "include::" in (report_dir / r).read_text(encoding="utf-8", errors="replace"):
-                main_rel = r
-                break
-        except OSError:
-            pass
-    if not main_rel:
-        main_rel = tops[0] if tops else (adoc[0] if adoc else primary_path)
-
-    doc_dir = os.path.dirname(main_rel)  # e.g. 'doc'
-
-    def rel_to_doc(r):
-        if doc_dir and r.startswith(doc_dir + "/"):
-            return r[len(doc_dir) + 1:]
-        return r
-
-    # Main document first, then its section files sorted by name.
-    others = sorted([r for r in adoc if r != main_rel], key=lambda x: x.lower())
-    ordered = ([main_rel] if main_rel in adoc else []) + others
-    doc_manifest = [{"path": r, "key": rel_to_doc(r)} for r in ordered]
-    main_key = rel_to_doc(main_rel)
-
-    img_manifest = sorted(imgs, key=lambda x: x.lower())
-    # imagesdir the page must reference so `image::X[]` resolves to the deployed
-    # file; SBOM puts images in <doc>/Images and sets `:imagesdir: Images`.
-    images_dir = os.path.dirname(img_manifest[0]) if img_manifest else doc_dir
-
-    return main_rel, doc_dir, main_key, doc_manifest, img_manifest, images_dir
-
-
-def read_log(report_dir: Path) -> str:
-    p = report_dir / "sbom.log"
-    if not p.is_file():
-        return "(no log captured)"
-    raw = p.read_bytes()
-    if raw[:2] == b"\xff\xfe":
-        return raw.decode("utf-16-le", "replace")
-    if raw[:3] == b"\xef\xbb\xbf":
-        return raw.decode("utf-8-sig", "replace")
-    return raw.decode("utf-8", "replace")
-
-
-# ── Report template (placeholder replacement, NOT f-strings, so the embedded
-#    CSS/JS braces need no escaping) ───────────────────────────────────────────
-PAGE = r"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>SBOM - __TITLE__</title>
-  <script>__HDRCFG__</script>
-  <script src="../../lvci-header.js" defer></script>
-  <style>
-    :root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--fg:#e6edf3;--fg-muted:#8b949e;--link:#58a6ff}
-    @media(prefers-color-scheme:light){:root{--bg:#fff;--surface:#f6f8fa;--border:#d0d7de;--fg:#1f2328;--fg-muted:#57606a;--link:#0969da}}
-    *{box-sizing:border-box}
-    body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--fg)}
-    .wrap{max-width:1180px;margin:0 auto;padding:20px}
-    .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:16px}
-    h1{margin:0 0 12px;font-size:1.3em}
-    a{color:var(--link);text-decoration:none}
-    a:hover{text-decoration:underline}
-    .badge{display:inline-block;padding:3px 10px;border-radius:4px;font-weight:700;font-size:.85em;color:#fff;background:__STATUSCOLOR__}
-    .meta{margin-top:10px;font-size:.82em;color:var(--fg-muted);display:flex;flex-wrap:wrap;gap:16px}
-    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 12px}
-    .btn{display:inline-block;padding:5px 12px;border:1px solid var(--border);border-radius:6px;font-size:.85em;background:var(--bg);color:var(--fg);cursor:pointer}
-    .btn:hover{border-color:var(--link);text-decoration:none}
-    .doc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px;overflow:auto}
-    .doc img{max-width:100%;height:auto}
-    .doc h1,.doc h2,.doc h3{border-bottom:1px solid var(--border);padding-bottom:.2em}
-    .doc table{border-collapse:collapse}
-    .doc td,.doc th{border:1px solid var(--border);padding:4px 8px}
-    iframe.docframe{width:100%;height:78vh;border:1px solid var(--border);border-radius:8px;background:#fff}
-    pre{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:14px;font-size:.78em;white-space:pre-wrap;word-break:break-word;overflow:auto;max-height:60vh;margin:0}
-    ul.files{margin:0;padding-left:18px;font-size:.85em;columns:2}
-    details{margin-top:14px}
-    summary{cursor:pointer;color:var(--fg-muted);font-size:.85em}
-    .hide{display:none}
-    /* Two-pane documentation viewer */
-    .viewer{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;min-height:60vh}
-    .vsidebar{flex:0 0 244px;background:var(--bg);border-right:1px solid var(--border);overflow:auto;max-height:80vh;padding:6px 0;font-size:.85em}
-    .vgroup{padding:12px 12px 4px;color:var(--fg-muted);font-size:.72em;text-transform:uppercase;letter-spacing:.05em;font-weight:700}
-    .vfile{display:block;width:100%;text-align:left;border:0;border-left:2px solid transparent;background:none;padding:5px 12px 5px 20px;color:var(--fg);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:inherit}
-    .vfile:hover{background:var(--surface);text-decoration:none}
-    .vfile.active{background:var(--surface);border-left-color:var(--link);color:var(--link);font-weight:600}
-    .vmain{flex:1 1 auto;min-width:0;overflow:auto;max-height:80vh}
-    .vmain .doc{border:0;border-radius:0;min-height:100%}
-    .vmain pre{border:0;border-radius:0;max-height:none}
-    .imgview{padding:20px;text-align:center}
-    .imgview img{max-width:100%;height:auto;border:1px solid var(--border);border-radius:6px;background:#fff}
-    .imgview .cap{margin-top:10px;font-size:.82em;color:var(--fg-muted);word-break:break-all}
-    @media(max-width:720px){.viewer{flex-direction:column}.vsidebar{flex:none;max-height:210px;border-right:0;border-bottom:1px solid var(--border)}}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      <h1>SBOM - __TITLE__</h1>
-      <span class="badge">__STATUSLABEL__</span>
-      <div class="meta">
-        <span>Date: __DATE__</span>
-        <span>Duration: __DURATION__s</span>
-        <span>Project: __PROJECT__</span>
-        <span>LabVIEW: __LVVERSION__</span>
-        <span>Files: __FILECOUNT__</span>
-      </div>
-    </div>
-    __DOCSECTION__
-    <div class="card">
-      <details __FILESOPEN__>
-        <summary>Generated files (__FILECOUNT__)</summary>
-        <ul class="files">__FILELIST__</ul>
-      </details>
-      <details>
-        <summary>Run log</summary>
-        <pre>__LOGHTML__</pre>
-      </details>
-    </div>
-  </div>
-  __DOCSCRIPT__
-</body>
-</html>
-"""
-
-DOC_HTML = r"""<div class="card">
-      <div class="toolbar">
-        <a class="btn" href="__PRIMARY__" target="_blank" rel="noopener">Open full documentation</a>
-      </div>
-      <iframe class="docframe" src="__PRIMARY__" title="Generated documentation"></iframe>
-    </div>"""
-
-DOC_ADOC = r"""<div class="card">
-      <div class="toolbar">
-        <a class="btn" href="__MAINADOC__" download>Download AsciiDoc</a>
-        <a class="btn" href="__MAINADOC__" target="_blank" rel="noopener">Open raw source</a>
-        <span id="renderNote" style="font-size:.8em;color:var(--fg-muted)"></span>
-      </div>
-      <div class="viewer">
-        <nav class="vsidebar" id="vsidebar" aria-label="Generated documentation files"></nav>
-        <div class="vmain">
-          <div class="doc" id="rendered">Rendering documentation&hellip;</div>
-          <pre id="rawsrc" class="hide"></pre>
-          <div class="imgview hide" id="imgview"></div>
-        </div>
-      </div>
-    </div>"""
-
-DOC_NONE = r"""<div class="card">
-      <p style="margin:0;color:var(--fg-muted)">No documentation was produced. See the run log below for details (the most common causes are Antidoc not being baked into the worker image, or no LabVIEW project being found).</p>
-    </div>"""
-
-# Client-side documentation viewer. A file navigator on the left lists the main
-# AsciiDoc, its section includes and every rendered image; the pane on the right
-# shows the fully rendered document by default (Asciidoctor.js from a CDN, with a
-# custom include-processor that resolves SBOM's `include::Includes/NNN.adoc[]`
-# from files fetched up front, and imagesdir pinned at the deployed image folder),
-# or the raw source of any file / a preview of any image on demand. If the CDN is
-# unreachable the raw main source stays visible and every file remains downloadable.
-ADOC_SCRIPT = r"""<script>
-  (function(){
-    var MAINKEY   = "__MAINKEY__";
-    var IMAGESDIR = "__IMAGESDIR__";
-    var DOCFILES  = __DOCFILES__;   // [{path:'doc/Includes/000.adoc', key:'Includes/000.adoc'}]
-    var IMGFILES  = __IMGFILES__;   // ['doc/Images/foo.png', ...]
-    var rendered = document.getElementById('rendered');
-    var rawsrc   = document.getElementById('rawsrc');
-    var imgview  = document.getElementById('imgview');
-    var sidebar  = document.getElementById('vsidebar');
-    var note     = document.getElementById('renderNote');
-    var DOCMAP = {};          // include key -> source text
-    var activeBtn = null;
-
-    function show(which){
-      rendered.classList.toggle('hide', which !== 'doc');
-      rawsrc.classList.toggle('hide',   which !== 'raw');
-      imgview.classList.toggle('hide',  which !== 'img');
-    }
-    function setActive(btn){ if(activeBtn) activeBtn.classList.remove('active'); activeBtn = btn; if(btn) btn.classList.add('active'); }
-    function basename(p){ return p.split('/').pop(); }
-    function mkFile(label, title, onClick){
-      var b = document.createElement('button');
-      b.className = 'vfile'; b.type = 'button'; b.textContent = label; if(title) b.title = title;
-      b.addEventListener('click', function(){ setActive(b); onClick(); });
-      return b;
-    }
-    function mkGroup(label){ var d = document.createElement('div'); d.className = 'vgroup'; d.textContent = label; sidebar.appendChild(d); }
-
-    function viewDoc(){ show('doc'); }
-    function viewRaw(key){ show('raw'); rawsrc.textContent = (DOCMAP[key] != null ? DOCMAP[key] : '(unavailable)'); rawsrc.scrollTop = 0; }
-    function viewImg(path){
-      show('img'); imgview.innerHTML = '';
-      var i = document.createElement('img'); i.src = encodeURI(path); i.alt = basename(path); i.loading = 'lazy';
-      var c = document.createElement('div'); c.className = 'cap'; c.textContent = basename(path);
-      imgview.appendChild(i); imgview.appendChild(c);
-    }
-
-    // Build the file navigator.
-    var docBtn = mkFile('\uD83D\uDCD6  Rendered document', 'The full generated document', viewDoc);
-    sidebar.appendChild(docBtn); setActive(docBtn);
-    mkGroup('Source files (' + DOCFILES.length + ')');
-    DOCFILES.forEach(function(f){
-      var isMain = (f.key === MAINKEY);
-      sidebar.appendChild(mkFile((isMain ? '\u2605  ' : '') + f.key, f.path, function(){ viewRaw(f.key); }));
-    });
-    if (IMGFILES.length){
-      mkGroup('Images (' + IMGFILES.length + ')');
-      IMGFILES.forEach(function(p){ sidebar.appendChild(mkFile(basename(p), p, function(){ viewImg(p); })); });
-    }
-
-    function fetchText(url){ return fetch(encodeURI(url)).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); }); }
-
-    // Fetch every source file, then render the main document with an include-processor.
-    Promise.all(DOCFILES.map(function(f){
-      return fetchText(f.path).then(function(t){ DOCMAP[f.key] = t; }).catch(function(){ DOCMAP[f.key] = ''; });
-    })).then(function(){
-      var main = DOCMAP[MAINKEY] || '';
-      rawsrc.textContent = main;
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@asciidoctor/core@2.2.6/dist/browser/asciidoctor.js';
-      s.integrity = 'sha384-sfmkIywMu6zzFP/nd8/OECbZxHtZhbc+AihuuveRHvvgXnadNUiWzFXMCD+lBU+6';
-      s.crossOrigin = 'anonymous';
-      s.onload = function(){
-        try{
-          var factory = window.Asciidoctor;
-          var ad = (typeof factory === 'function') ? factory() : factory;
-          var reg = ad.Extensions.create();
-          reg.includeProcessor(function(){
-            this.handles(function(){ return true; });
-            this.process(function(doc, reader, target, attrs){
-              var content = DOCMAP[target];
-              if (content == null) content = 'NOTE: include not found: ' + target;
-              return reader.pushInclude(content, target, target, 1, attrs);
-            });
-          });
-          var htmlOut = ad.convert(main, {standalone:false, safe:'safe', backend:'html5',
-            extension_registry: reg,
-            attributes:{showtitle:true, 'imagesdir':IMAGESDIR, icons:'font', sectanchors:true, 'source-highlighter':null}});
-          rendered.innerHTML = htmlOut;
-          if (note) note.textContent = '';
-        }catch(e){ rendered.classList.add('hide'); show('raw'); if(note) note.textContent = 'Showing raw source (render failed).'; }
-      };
-      s.onerror = function(){ rendered.classList.add('hide'); show('raw'); if(note) note.textContent = 'Showing raw source (renderer offline).'; };
-      document.head.appendChild(s);
-    });
-  })();
-</script>"""
-
-
-def build(report_dir: Path, args) -> None:
-    meta = read_meta(report_dir)
-    primary_kind, primary_path, rel_files = scan_doc(report_dir)
-    # Prefer the runner's own determination, fall back to a fresh scan.
-    m_primary = meta.get("primary") or {}
-    if m_primary.get("kind") and m_primary.get("kind") != "none":
-        primary_kind = m_primary.get("kind", primary_kind)
-        primary_path = m_primary.get("path", primary_path)
-    if not rel_files and meta.get("files"):
-        rel_files = list(meta.get("files"))
-
-    generated = primary_kind in ("html", "adoc")
-    status = "passed" if generated else "failed"
-    status_label = "documentation generated" if generated else "no documentation produced"
-    status_color = "#2ea043" if generated else "#da3633"
-
-    title = args.title or meta.get("title") or (args.repo.split("/")[-1] if args.repo else "LabVIEW Project")
-    duration = meta.get("duration", "")
-    lv_version = meta.get("lvVersion", args.labview_version or "")
-    project = meta.get("project", "")
-    sha = args.sha or ""
-    short = sha[:7] if sha else ""
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-
-    # Per-file download list.
-    file_items = []
-    for rel in rel_files:
-        try:
-            size = (report_dir / rel).stat().st_size
-        except OSError:
-            size = 0
-        file_items.append(
-            f'<li><a href="{html.escape(rel)}">{html.escape(rel)}</a> '
-            f'<span style="color:var(--fg-muted)">({size} B)</span></li>')
-    file_list_html = "".join(file_items) or '<li style="color:var(--fg-muted)">(none)</li>'
-
-    # Documentation section + optional render script depend on what was produced.
-    doc_script = ""
-    if primary_kind == "html":
-        doc_section = DOC_HTML.replace("__PRIMARY__", html.escape(primary_path))
-    elif primary_kind == "adoc":
-        main_rel, doc_dir, main_key, doc_manifest, img_manifest, images_dir = _doc_viewer_data(
-            report_dir, rel_files, primary_path)
-        doc_section = DOC_ADOC.replace("__MAINADOC__", html.escape(main_rel))
-        doc_script = (ADOC_SCRIPT
-                      .replace("__MAINKEY__", main_key.replace('"', '\\"'))
-                      .replace("__IMAGESDIR__", images_dir.replace('"', '\\"'))
-                      .replace("__DOCFILES__", json.dumps(doc_manifest))
-                      .replace("__IMGFILES__", json.dumps(img_manifest)))
+    if args.platform == "windows":
+        platforms = [{"id": "windows", "url": None}, {"id": "linux", "url": "linux/results.json"}]
+        snap_depth = "../../"
     else:
-        doc_section = DOC_NONE
+        platforms = [{"id": "windows", "url": "../results.json"}, {"id": "linux", "url": None}]
+        snap_depth = "../../../"
 
-    # The header's "Run log" link points here (matches DOCTYPES rawName); when the
-    # report is framed the header derives the path from the embedded src instead.
-    raw_url = "sbom.log"
-    hdr_cfg = ("window.LVCI={context:'sbom-report',repo:'%s',pagesUrl:'../..',sha:'%s',short:'%s',platform:'%s',rawUrl:'%s'};"
-               % (args.repo, sha, short, args.platform, raw_url))
+    tooling = {}
+    res_dir = Path(args.results) if args.results else None
+    if res_dir and (res_dir / "_tooling.json").exists():
+        try:
+            tooling = json.loads((res_dir / "_tooling.json").read_text(encoding="utf-8-sig"))
+        except Exception:
+            tooling = {}
+    if not isinstance(tooling, dict):
+        tooling = {}
+    
+    _miss = tooling.get("missing")
+    tooling["missing"] = [_miss] if isinstance(_miss, dict) else (_miss or [])
 
-    page = (PAGE
-            .replace("__TITLE__", html.escape(title))
-            .replace("__HDRCFG__", hdr_cfg)
-            .replace("__STATUSCOLOR__", status_color)
-            .replace("__STATUSLABEL__", status_label)
-            .replace("__DATE__", now)
-            .replace("__DURATION__", str(duration))
-            .replace("__PROJECT__", html.escape(project) or "-")
-            .replace("__LVVERSION__", html.escape(str(lv_version)) or "-")
-            .replace("__FILECOUNT__", str(len(rel_files)))
-            .replace("__FILESOPEN__", "open" if not generated else "")
-            .replace("__FILELIST__", file_list_html)
-            .replace("__LOGHTML__", html.escape(read_log(report_dir)))
-            .replace("__DOCSECTION__", doc_section)
-            .replace("__DOCSCRIPT__", doc_script))
-
-    (report_dir / "index.html").write_text(page, encoding="utf-8")
-
-    # Augment the machine-readable summary with run/commit context.
-    summary = {
-        "status": status,
-        "title": title,
-        "project": project,
-        "lvVersion": lv_version,
-        "platform": args.platform,
-        "sha": sha,
-        "primary": {"kind": primary_kind, "path": primary_path},
-        "fileCount": len(rel_files),
-        "duration": duration,
-        "generated_at": now,
-        "commit": {"message": args.commit_msg, "author": args.author, "date": args.date},
+    pages_url = (args.pages_url or "").rstrip("/")
+    return {
+        "meta": {
+            "sha": args.sha,
+            "short": (args.sha or "")[:7],
+            "platform": args.platform,
+            "repo": args.repo,
+            "pages_url": pages_url,
+            "dash_url": (pages_url + "/") if pages_url else snap_depth,
+            "labview_version": args.labview_version or meta_extra.get("labview_version", ""),
+            "commit": {"message": args.commit_msg, "author": args.author, "date": args.date},
+            "generated_utc": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            "spdx_version": sbom_data.get("spdx_version", "SPDX-2.3"),
+            "created": sbom_data.get("created", ""),
+        },
+        "summary": {
+            "total_packages": len(packages),
+        },
+        "platforms": platforms,
+        "packages": packages,
+        "tooling": tooling,
     }
-    (report_dir / "summary.json").write_text(json.dumps(summary), encoding="utf-8")
-    print(f"SBOM report -> {report_dir/'index.html'} (status={status}, primary={primary_kind})")
+
+
+# ── Renderer ─────────────────────────────────────────────────────────────────
+def _esc(s) -> str:
+    return html.escape(str(s if s is not None else ""), quote=True)
+
+
+def tooling_banner_html(missing: list, configure_url: str) -> str:
+    if isinstance(missing, dict):
+        missing = [missing]
+    miss = [x for x in (missing or []) if isinstance(x, dict) and (x.get("kind") in (None, "", "missing-tooling"))]
+    if not miss:
+        return ""
+    names = ", ".join(_esc(x.get("name") or x.get("tool") or "") for x in miss if (x.get("name") or x.get("tool")))
+    detail = next((x.get("detail") for x in miss if x.get("detail")), "")
+    detail_html = f'<div class="lvci-needtool-d">{_esc(detail)}</div>' if detail else ""
+    cta = (f'<a class="lvci-needtool-cta" href="{_esc(configure_url)}" target="_top" rel="noopener">'
+           'Set up the container</a>') if configure_url else ""
+    return (
+        '<div class="lvci-needtool" role="alert">'
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>'
+        '<line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+        '<div class="lvci-needtool-t"><strong>This activity could not run.</strong>'
+        'The selected container did not contain the dependencies needed to generate an SBOM'
+        f'{(" (" + names + ")") if names else ""}. '
+        'Set up the container to add the required tooling, then re-run.'
+        f'{detail_html}</div>'
+        f'{cta}</div>'
+    )
+
+
+def render(data: dict) -> str:
+    blob = json.dumps(data, ensure_ascii=False)
+    blob = blob.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    m = data.get("meta", {}) or {}
+    pages = (m.get("pages_url") or "").rstrip("/")
+    is_linux = m.get("platform") == "linux"
+    hdr_src = "../../../lvci-header.js" if is_linux else "../../lvci-header.js"
+    hdr_cfg = {
+        "context": "sbom-report",
+        "repo": m.get("repo", ""),
+        "pagesUrl": pages or ("../../.." if is_linux else "../.."),
+        "sha": m.get("sha", ""),
+        "short": m.get("short", ""),
+        "platform": m.get("platform", "windows"),
+    }
+    dash = m.get("dash_url") or ""
+    repo = m.get("repo") or ""
+    cfg_url = (dash or "") + "configure.html" + ("?repo=" + quote(repo, safe="") if repo else "")
+    banner = tooling_banner_html((data.get("tooling") or {}).get("missing") or [], cfg_url)
+
+    out = _TEMPLATE.replace("__SBOM_DATA_JSON__", blob)
+    out = out.replace("__SBOM_HEADER_CFG__", json.dumps(hdr_cfg, ensure_ascii=False))
+    out = out.replace("__LVCI_HEADER_SRC__", hdr_src)
+    out = out.replace("__SBOM_TOOLING_BANNER__", banner)
+    return out
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Build the friendly SBOM report.")
-    ap.add_argument("--in", dest="in_dir", required=True,
-                    help="Report directory holding sbom-meta.json + doc/ (usually same as --out).")
-    ap.add_argument("--out", required=True, help="Output directory for index.html + summary.json.")
-    ap.add_argument("--platform", default="windows")
+    ap = argparse.ArgumentParser(description="Build an SBOM report from SPDX sbom.json.")
+    ap.add_argument("--sbom", default="", help="Path to sbom.json file")
+    ap.add_argument("--results", default="", help="Directory containing sbom.json")
+    ap.add_argument("--out", required=True, help="Output directory")
+    ap.add_argument("--platform", default="windows", choices=["windows", "linux"])
+    ap.add_argument("--meta", default="", help="meta.json metadata file")
     ap.add_argument("--sha", default="")
     ap.add_argument("--repo", default="")
     ap.add_argument("--pages-url", dest="pages_url", default="")
-    ap.add_argument("--title", default="")
-    ap.add_argument("--labview-version", dest="labview_version", default="")
     ap.add_argument("--commit-msg", dest="commit_msg", default="")
     ap.add_argument("--author", default="")
     ap.add_argument("--date", default="")
+    ap.add_argument("--labview-version", dest="labview_version", default="")
     args = ap.parse_args()
 
-    report_dir = Path(args.out)
-    report_dir.mkdir(parents=True, exist_ok=True)
-    build(report_dir, args)
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    data = build_data(args)
+    (out_dir / "results.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+    (out_dir / "index.html").write_text(render(data), encoding="utf-8")
+    s = data["summary"]
+    print(f"SBOM report: {s['total_packages']} package(s) documented -> {out_dir / 'index.html'}")
 
+
+# ── HTML Template ────────────────────────────────────────────────────────────
+_TEMPLATE = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Software Bill of Materials (SBOM) — LabVIEW CI</title>
+<script>window.LVCI = __SBOM_HEADER_CFG__;</script>
+<script src="__LVCI_HEADER_SRC__" defer></script>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#0d1117;--border:#30363d;--fg:#e6edf3;--muted:#8b949e;--link:#58a6ff;--code:#010409}
+@media(prefers-color-scheme:light){:root{--bg:#fff;--surface:#f6f8fa;--surface2:#fff;--border:#d0d7de;--fg:#1f2328;--muted:#57606a;--link:#0969da;--code:#f6f8fa}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 64px}
+h1{font-size:1.45em;margin:0 0 2px}
+.sub{color:var(--muted);font-size:.86em;margin:2px 0 16px}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.card{flex:1 1 120px;min-width:110px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.card .n{font-size:1.6em;font-weight:700;line-height:1}
+.card .l{color:var(--muted);font-size:.78em;margin-top:3px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0 14px}
+.toolbar input[type=search]{flex:1 1 220px;min-width:180px;padding:8px 10px;background:var(--surface2);color:var(--fg);border:1px solid var(--border);border-radius:7px;font-size:.9em}
+.count{color:var(--muted);font-size:.8em;margin-left:auto}
+.plat{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-left:8px;vertical-align:middle}
+.plat button{background:transparent;color:var(--muted);border:0;padding:4px 11px;font-size:.8em;cursor:pointer}
+.plat button.active{background:rgba(177,186,196,.16);color:var(--fg)}
+.plat button[disabled]{opacity:.4;cursor:default}
+.table-container{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface)}
+table{width:100%;border-collapse:collapse;text-align:left;font-size:.88em}
+th,td{padding:10px 14px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:0}
+th{background:var(--surface2);color:var(--muted);font-weight:600}
+.pkg-name{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600}
+.empty{color:var(--muted);text-align:center;padding:40px 0}
+.hidden{display:none!important}
+.lvci-needtool{display:flex;align-items:flex-start;gap:12px;max-width:1040px;margin:16px auto 0;padding:13px 16px;background:rgba(187,128,9,.13);border:1px solid rgba(187,128,9,.45);border-left:4px solid #bb8009;border-radius:10px}
+.lvci-needtool svg{flex:0 0 auto;width:20px;height:20px;color:#bb8009;margin-top:1px}
+.lvci-needtool-t{flex:1 1 auto;font-size:.9em}
+.lvci-needtool-t strong{display:block;margin-bottom:2px}
+.lvci-needtool-d{color:var(--muted);font-size:.92em;margin-top:5px}
+.lvci-needtool-cta{flex:0 0 auto;align-self:center;font-size:.85em;font-weight:600;color:#fff;background:#bb8009;border-radius:7px;padding:8px 13px;text-decoration:none;white-space:nowrap}
+</style>
+</head>
+<body>
+__SBOM_TOOLING_BANNER__
+<div class="wrap">
+  <h1>Software Bill of Materials (SBOM) <span class="plat" id="plat-toggle"></span></h1>
+  <div class="sub" id="sub"></div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Filter packages by name or vendor…">
+    <span class="count" id="rescount"></span>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Package Name</th>
+          <th>Version</th>
+          <th>Vendor / Supplier</th>
+        </tr>
+      </thead>
+      <tbody id="pkg-list"></tbody>
+    </table>
+  </div>
+</div>
+
+<script id="sbom-data" type="application/json">__SBOM_DATA_JSON__</script>
+<script>
+const SELF = JSON.parse(document.getElementById('sbom-data').textContent);
+const PLATFORMS = SELF.platforms || [{id:SELF.meta.platform,url:null}];
+const SELF_PLATFORM = SELF.meta.platform;
+const CACHE = { [SELF_PLATFORM]: SELF };
+let CUR = SELF_PLATFORM, D = SELF;
+const META = SELF.meta;
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const PLAT_LABEL = {windows:'Windows', linux:'Linux'};
+let query='';
+
+(function header(){
+  const m = META;
+  const commitMsg = (m.commit && m.commit.message) ? esc(m.commit.message) : '';
+  const shaLink = m.repo && m.sha ? `https://github.com/${m.repo}/commit/${m.sha}` : '';
+  document.getElementById('sub').innerHTML =
+    (m.short ? `Commit ${shaLink?`<a href="${shaLink}" target="_top">${esc(m.short)}</a>`:esc(m.short)} ` : '') +
+    (commitMsg ? `&middot; ${commitMsg} ` : '') +
+    (m.spdx_version ? `&middot; ${esc(m.spdx_version)} ` : '') +
+    `&middot; generated ${esc(m.generated_utc||'')}`;
+})();
+
+function renderToggle(){
+  const host = document.getElementById('plat-toggle');
+  host.innerHTML = PLATFORMS.map(p=>{
+    const dis = (p.id!==SELF_PLATFORM && p.url==null) ? 'disabled' : '';
+    return `<button data-plat="${p.id}" class="${p.id===CUR?'active':''}" ${dis}>${esc(PLAT_LABEL[p.id]||p.id)}</button>`;
+  }).join('');
+  host.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>switchPlatform(b.dataset.plat)));
+}
+
+async function switchPlatform(pid){
+  if(pid===CUR) return;
+  const p = PLATFORMS.find(x=>x.id===pid); if(!p) return;
+  let data = CACHE[pid];
+  if(data===undefined){
+    try{ data = await fetch(p.url).then(r=>r.json()); }catch(e){ data = null; }
+    CACHE[pid] = data;
+  }
+  CUR = pid;
+  if(!data){ renderToggle(); showEmpty(pid); return; }
+  D = data; renderToggle(); renderAll();
+}
+
+function showEmpty(pid){
+  document.getElementById('cards').innerHTML='';
+  document.getElementById('pkg-list').innerHTML=`<tr><td colspan="3" class="empty">No SBOM available for ${esc(PLAT_LABEL[pid]||pid)}.</td></tr>`;
+  document.getElementById('rescount').textContent='';
+}
+
+function renderAll(){
+  const s = D.summary;
+  document.getElementById('cards').innerHTML = `<div class="card"><div class="n">${(s.total_packages||0).toLocaleString()}</div><div class="l">Packages</div></div>`;
+  renderPackages();
+  apply();
+}
+
+function renderPackages(){
+  const host = document.getElementById('pkg-list');
+  if(!D.packages || !D.packages.length){
+    host.innerHTML = `<tr><td colspan="3" class="empty">No packages found in SBOM.</td></tr>`;
+    return;
+  }
+  host.innerHTML = D.packages.map(p => {
+    const hay = (p.name + ' ' + p.vendor + ' ' + p.version).toLowerCase();
+    return `<tr class="pkg-row" data-text="${esc(hay)}">
+      <td class="pkg-name">${esc(p.name)}</td>
+      <td>${esc(p.version)}</td>
+      <td>${esc(p.vendor)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function apply(){
+  let vis = 0;
+  document.querySelectorAll('#pkg-list .pkg-row').forEach(row => {
+    const show = !query || row.dataset.text.includes(query);
+    row.classList.toggle('hidden', !show);
+    if(show) vis++;
+  });
+  document.getElementById('rescount').textContent = `${vis} package${vis===1?'':'s'} shown`;
+}
+
+document.getElementById('q').addEventListener('input', e => {
+  query = e.target.value.trim().toLowerCase();
+  apply();
+});
+
+renderToggle();
+renderAll();
+</script>
+</body>
+</html>
+"""
 
 if __name__ == "__main__":
     main()

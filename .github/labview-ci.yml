@@ -17,3 +17,4 @@ activities:
   - snapshots
   - snapshots-2
   - unit-tests
+  - sbom

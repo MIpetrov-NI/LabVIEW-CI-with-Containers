@@ -4633,8 +4633,8 @@
           ".github/labview/build-sbom-report.py"
         ],
         "windows": [
-          ".github/workflows/run-sbom-windows-container.yml",
-          ".github/labview/run-sbom.ps1"
+          ".github/workflows/generate-sbom-windows-container.yml",
+          ".github/labview/run-sbom-generation.ps1"
         ],
         "linux": []
       },
