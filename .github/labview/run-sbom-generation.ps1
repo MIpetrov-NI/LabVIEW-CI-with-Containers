@@ -3,6 +3,8 @@
     Generates a Software Bill of Materials (SBOM) for LabVIEW projects using JKI's VIPM CLI.
     Emits an SPDX-compliant JSON file (sbom.json) and an HTML widget (sbom_widget.html)
     intended for dashboard integration.
+    Reference: https://docs.vipm.io/latest/sbom/getting-started/
+    Development by: Daniel Coons, TSC
 
 .PARAMETER WorkspaceRoot
     Absolute path to the checked-out project repository. Default: C:\workspace.
