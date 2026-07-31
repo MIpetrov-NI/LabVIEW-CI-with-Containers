@@ -69,7 +69,7 @@ jobs:
           fi
 
           SRC_REPO=$(awk '/^[[:space:]]*repo:[[:space:]]/{print $2; exit}' "$CFG")
-          SRC_REPO=${SRC_REPO:-danielcoons/LabVIEW-CI-with-Containers}
+          SRC_REPO=${SRC_REPO:-elijah286/LabVIEW-CI-with-Containers}
           INSTALLED=$(awk '/^[[:space:]]*installedVersion:[[:space:]]/{print $2; exit}' "$CFG")
           MAXPAR=$(awk '/^[[:space:]]*maxParallel:[[:space:]]/{print $2; exit}' "$CFG")
           echo "source repo: $SRC_REPO  installed: ${INSTALLED:-unknown}"
