@@ -1,0 +1,48 @@
+name: Discover Clients
+run-name: Discover LabVIEW CI clients - ${{ github.event_name == 'workflow_dispatch' && 'manual run' || github.sha }}
+
+# Publishes clients.json - the registry of public repositories discovered to be
+# running this LabVIEW CI tooling - to the Pages site, where the dashboard's
+# (source-only) Clients page renders it. Discovery is PULL-based: it queries
+# GitHub's code-search index for this repo's slug rather than asking clients to
+# phone home, so no client is modified and no shared secret is needed.
+#
+# Root-only: this workflow lives only in the source repo and is guarded to it, so
+# a fork or a vendored copy never scans/publishes on someone else's behalf.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'   # daily; code-search index lags real-time by minutes-hours
+  workflow_dispatch:
+
+concurrency:
+  group: discover-clients
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # deploy clients.json to the gh-pages branch
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    if: github.repository == 'elijah286/LabVIEW-CI-with-Containers'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Discover client repositories
+        env:
+          # Code search across public repos is more reliable with a PAT than with
+          # the ephemeral GITHUB_TOKEN; fall back to GITHUB_TOKEN when no PAT is set.
+          GH_TOKEN: ${{ secrets.DISCOVERY_TOKEN || secrets.GITHUB_TOKEN }}
+          SOURCE_REPO: ${{ github.repository }}
+          CLIENTS_OUT: ci-out/clients/clients.json
+          # Repository topic clients carry; the reliable discovery signal.
+          CLIENT_TOPIC: labview-ci
+        run: python3 .github/scripts/discover-clients.py
+
+      - name: Deploy clients.json to GitHub Pages
+        uses: ./.github/actions/publish-gh-pages
+        with:
+          publish_dir: ci-out/clients
+          destination_dir: .

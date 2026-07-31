@@ -1,12 +1,5 @@
 # LabVIEW CI with Containers
 
-<!-- labview-ci:dashboard -->
-## LabVIEW CI
-
-[![LabVIEW CI dashboard](https://img.shields.io/badge/LabVIEW%20CI-dashboard-2ea44f)](https://danielcoons.github.io/LabVIEW-CI-with-Containers/)
-
-LabVIEW CI runs on every pull request. See the [**CI dashboard**](https://danielcoons.github.io/LabVIEW-CI-with-Containers/) for build status, VI Analyzer results, VI diffs, and mass-compile reports.
-
 **Real CI/CD for LabVIEW — mass compile, VI Analyzer, visual VI diffs, a browsable VI gallery, and a live status dashboard — running entirely on GitHub Actions, in containers, on your own account.**
 
 Push a commit and this pipeline spins up headless LabVIEW inside a throwaway Docker container on a GitHub runner, runs the code-quality checks you choose, and publishes the results as a polished GitHub Pages dashboard. There's no build server to babysit, no license server to wire up, and nothing running on anyone else's infrastructure — every container executes in *your* Actions environment, under your account's minutes.
