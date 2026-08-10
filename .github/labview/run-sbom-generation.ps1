@@ -141,19 +141,25 @@ function Invoke-SbomGeneration([string]$Workspace, [string]$OutDir) {
                 # 5. Execute VIPM SBOM command
                 Write-Host "Executing VIPM CLI..." -ForegroundColor Cyan
                 & $VipmCli sbom "$projPath" --format "cyclonedx" --schema-version "1.5" --output "$outPath"
+                $vipmExitCode = $LASTEXITCODE
+                if ($vipmExitCode -ne 0) {
+                    throw "VIPM CLI SBOM generation failed with exit code $vipmExitCode."
+                }
 
-                if (Test-Path $outPath) {
-                    Write-Host "VIPM SBOM generated successfully!" -ForegroundColor Green
-                    $sbomRaw = Get-Content $outPath | ConvertFrom-Json
-                    if ($sbomRaw.components) {
-                        $sbomPackages = @($sbomRaw.components | ForEach-Object {
-                            [pscustomobject]@{
-                                Name    = $_.name
-                                Version = $_.version
-                                Vendor  = if ($_.publisher) { $_.publisher } else { "VIPM Package" }
-                            }
-                        })
-                    }
+                if (-not (Test-Path $outPath)) {
+                    throw "VIPM CLI reported success but did not create output file: $outPath"
+                }
+
+                Write-Host "VIPM SBOM generated successfully!" -ForegroundColor Green
+                $sbomRaw = Get-Content $outPath | ConvertFrom-Json
+                if ($sbomRaw.components) {
+                    $sbomPackages = @($sbomRaw.components | ForEach-Object {
+                        [pscustomobject]@{
+                            Name    = $_.name
+                            Version = $_.version
+                            Vendor  = if ($_.publisher) { $_.publisher } else { "VIPM Package" }
+                        }
+                    })
                 }
             } finally {
                 # 6. Clean up background LabVIEW process

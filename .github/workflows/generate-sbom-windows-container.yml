@@ -200,7 +200,6 @@ jobs:
               -File "C:\workspace\.github\labview\run-sbom-generation.ps1" `
               -WorkspaceRoot "C:\workspace" `
               -ResultsDir    "C:\workspace\ci-out\sbom\results"
-        continue-on-error: true
 
       - name: Build friendly SBOM report
         id: report
