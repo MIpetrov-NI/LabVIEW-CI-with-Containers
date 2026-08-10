@@ -1901,6 +1901,9 @@ docker exec &lt;name&gt; powershell -File C:\ops\render-snapshots.ps1 ...   # pe
         <li><strong>Concurrency is per account, not per repo.</strong> GitHub's job-concurrency limit is shared
           across all your repositories, which is why the per-repo runner cap defaults conservatively.</li>
         <li><strong>Unit Tests &amp; Antidoc are Windows-only</strong> today (they depend on baked VIPM tooling).</li>
+        <li><strong>SBOM now fails fast on VIPM errors.</strong> The SBOM driver treats a non-zero
+          <code>vipm sbom</code> exit (or missing output file) as fatal, and the workflow no longer uses
+          <code>continue-on-error</code> on that step, so failed scans do not publish replacement output artifacts. Additionally, VIPM now auto-detects and explicitly targets the container's installed LabVIEW version (via <code>--labview-version</code>) to prevent auto-detection from project metadata; this avoids errors when a project targets a different year than the container provides.</li>
         <li><strong>First container pull is slow.</strong> The worker image is multi-gigabyte; GitHub-hosted runners
           re-pull every job. A self-hosted runner with a warm Docker layer cache is the cure.</li>
         <li><strong>LabVIEW 2026+ needs <code>-Headless</code></strong> for Windows container operations, or VI

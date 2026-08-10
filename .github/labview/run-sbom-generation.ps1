@@ -66,6 +66,19 @@ function Resolve-VIPMCLI {
     return $null
 }
 
+function Resolve-LabVIEWVersion {
+    # Detect installed LabVIEW version from the filesystem path.
+    # Paths are typically: C:\Program Files\National Instruments\LabVIEW 2026\LabVIEW.exe
+    $lvExe = Get-ChildItem "C:\Program Files*\National Instruments\LabVIEW*\LabVIEW.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $lvExe) { return $null }
+    
+    # Extract year (4 consecutive digits) from the path, e.g. "LabVIEW 2026" -> "2026"
+    if ($lvExe.FullName -match "LabVIEW[\s]*([0-9]{4})") {
+        return $Matches[1]
+    }
+    return $null
+}
+
 # -- Main Generation Logic ----------------------------------------------------
 function Invoke-SbomGeneration([string]$Workspace, [string]$OutDir) {
     Write-Host "=== JKI VIPM SBOM Generation ==="
@@ -77,6 +90,15 @@ function Invoke-SbomGeneration([string]$Workspace, [string]$OutDir) {
     Write-Host ""
 
     $sbomPackages = @()
+    
+    # Detect the installed LabVIEW version early, before VIPM needs it
+    $labviewVersion = Resolve-LabVIEWVersion
+    if (-not $labviewVersion) {
+        Write-Warning "Could not detect installed LabVIEW version. VIPM SBOM may fail if project targets a different year."
+        $labviewVersion = '2026'  # fallback
+    } else {
+        Write-Host "  Detected LabVIEW version: $labviewVersion" -ForegroundColor Gray
+    }
 
     if ($VipmCli -and (Test-Path $VipmCli)) {
         Write-Host "Generating native VIPM SBOM via VIPM CLI..." -ForegroundColor Cyan
@@ -140,7 +162,8 @@ function Invoke-SbomGeneration([string]$Workspace, [string]$OutDir) {
             try {
                 # 5. Execute VIPM SBOM command
                 Write-Host "Executing VIPM CLI..." -ForegroundColor Cyan
-                & $VipmCli sbom "$projPath" --format "cyclonedx" --schema-version "1.5" --output "$outPath"
+                Write-Host "  Targeting LabVIEW version: $labviewVersion (64-bit)" -ForegroundColor Gray
+                & $VipmCli --labview-version $labviewVersion --labview-bitness 64 sbom "$projPath" --format "cyclonedx" --schema-version "1.5" --output "$outPath"
                 $vipmExitCode = $LASTEXITCODE
                 if ($vipmExitCode -ne 0) {
                     throw "VIPM CLI SBOM generation failed with exit code $vipmExitCode."
