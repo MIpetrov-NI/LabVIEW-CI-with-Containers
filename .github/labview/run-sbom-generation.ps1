@@ -163,7 +163,10 @@ function Invoke-SbomGeneration([string]$Workspace, [string]$OutDir) {
                 # 5. Execute VIPM SBOM command
                 Write-Host "Executing VIPM CLI..." -ForegroundColor Cyan
                 Write-Host "  Targeting LabVIEW version: $labviewVersion (64-bit)" -ForegroundColor Gray
-                & $VipmCli --labview-version $labviewVersion --labview-bitness 64 sbom "$projPath" --format "cyclonedx" --schema-version "1.5" --output "$outPath"
+                # --allow-missing-files: instrument drivers (e.g. <instrlib>/...) are not installed
+                # in the CI container; VIPM still generates the SBOM for all resolvable packages
+                # and emits warnings for the missing references rather than aborting (exit code 18).
+                & $VipmCli --labview-version $labviewVersion --labview-bitness 64 sbom "$projPath" --format "cyclonedx" --schema-version "1.5" --allow-missing-files --output "$outPath"
                 $vipmExitCode = $LASTEXITCODE
                 if ($vipmExitCode -ne 0) {
                     throw "VIPM CLI SBOM generation failed with exit code $vipmExitCode."
