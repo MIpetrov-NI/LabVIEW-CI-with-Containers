@@ -39,47 +39,47 @@ def _supplier_name(value) -> str:
 
 
 def parse_sbom(sbom_path: Path) -> dict:
-    """Parse a CycloneDX or SPDX JSON file into a list of standardized package dictionaries."""
-    if not sbom_path.exists():
-  return {"spdx_version": "Unknown", "packages": [], "created": ""}
+  """Parse a CycloneDX or SPDX JSON file into a list of standardized package dictionaries."""
+  if not sbom_path.exists():
+    return {"spdx_version": "Unknown", "packages": [], "created": ""}
 
-    try:
-        data = json.loads(sbom_path.read_text(encoding="utf-8-sig"))
-    except Exception as e:
-        return {
-      "spdx_version": "Unknown",
-            "packages": [],
-            "created": "",
-            "parse_error": str(e),
-        }
-
-    raw_packages = data.get("components", []) or data.get("packages", [])
-    packages = []
-    for pkg in raw_packages:
-        if isinstance(pkg, dict):
-            vendor = (
-                _supplier_name(pkg.get("supplier"))
-                or _supplier_name(pkg.get("Supplier"))
-                or str(pkg.get("Vendor") or pkg.get("vendor") or "")
-                or str(pkg.get("publisher") or pkg.get("Publisher") or "")
-                or _supplier_from_purl(pkg.get("purl") or pkg.get("PURL"))
-                or "N/A"
-            )
-            packages.append({
-                "name": str(pkg.get("Name") or pkg.get("name") or "Unknown Package"),
-                "version": str(pkg.get("Version") or pkg.get("version") or "Unknown"),
-                "vendor": str(vendor),
-            })
-
+  try:
+    data = json.loads(sbom_path.read_text(encoding="utf-8-sig"))
+  except Exception as e:
     return {
-        "spdx_version": (
-            f"CycloneDX {data.get('specVersion', 'Unknown')}"
-            if data.get("bomFormat") == "CycloneDX"
-            else data.get("spdxVersion", "SPDX-2.3")
-        ),
-        "created": data.get("created", ""),
-        "packages": packages,
+      "spdx_version": "Unknown",
+      "packages": [],
+      "created": "",
+      "parse_error": str(e),
     }
+
+  raw_packages = data.get("components", []) or data.get("packages", [])
+  packages = []
+  for pkg in raw_packages:
+    if isinstance(pkg, dict):
+      vendor = (
+        _supplier_name(pkg.get("supplier"))
+        or _supplier_name(pkg.get("Supplier"))
+        or str(pkg.get("Vendor") or pkg.get("vendor") or "")
+        or str(pkg.get("publisher") or pkg.get("Publisher") or "")
+        or _supplier_from_purl(pkg.get("purl") or pkg.get("PURL"))
+        or "N/A"
+      )
+      packages.append({
+        "name": str(pkg.get("Name") or pkg.get("name") or "Unknown Package"),
+        "version": str(pkg.get("Version") or pkg.get("version") or "Unknown"),
+        "vendor": str(vendor),
+      })
+
+  return {
+    "spdx_version": (
+      f"CycloneDX {data.get('specVersion', 'Unknown')}"
+      if data.get("bomFormat") == "CycloneDX"
+      else data.get("spdxVersion", "SPDX-2.3")
+    ),
+    "created": data.get("created", ""),
+    "packages": packages,
+  }
 
 
 def clean(text: str) -> str:
