@@ -79,6 +79,44 @@ function Resolve-LabVIEWVersion {
     return $null
 }
 
+function Resolve-SbomVendor([object]$component) {
+    if (-not $component) { return 'N/A' }
+
+    $supplier = $component.supplier
+    if ($supplier -and $supplier.name) { return [string]$supplier.name }
+    if ($supplier -and ($supplier -is [string])) { return [string]$supplier }
+
+    foreach ($prop in @('publisher', 'vendor')) {
+        $value = $component.$prop
+        if ($value) { return [string]$value }
+    }
+
+    $purl = [string]$component.purl
+    if ($purl.StartsWith('pkg:nipkg/')) { return 'NIPM' }
+    if ($purl.StartsWith('pkg:vipm/')) { return 'VIPM' }
+
+    return 'N/A'
+}
+
+function Resolve-SbomVendor([object]$component) {
+    if (-not $component) { return 'N/A' }
+
+    $supplier = $component.supplier
+    if ($supplier -and $supplier.name) { return [string]$supplier.name }
+    if ($supplier -and ($supplier -is [string])) { return [string]$supplier }
+
+    foreach ($prop in @('publisher', 'vendor')) {
+        $value = $component.$prop
+        if ($value) { return [string]$value }
+    }
+
+    $purl = [string]$component.purl
+    if ($purl.StartsWith('pkg:nipkg/')) { return 'NIPM' }
+    if ($purl.StartsWith('pkg:vipm/')) { return 'VIPM' }
+
+    return 'N/A'
+}
+
 # -- Main Generation Logic ----------------------------------------------------
 function Invoke-SbomGeneration([string]$Workspace, [string]$OutDir) {
     Write-Host "=== JKI VIPM SBOM Generation ==="
@@ -90,6 +128,7 @@ function Invoke-SbomGeneration([string]$Workspace, [string]$OutDir) {
     Write-Host ""
 
     $sbomPackages = @()
+    $outPath = $null
     
     # Detect the installed LabVIEW version early, before VIPM needs it
     $labviewVersion = Resolve-LabVIEWVersion
@@ -183,7 +222,7 @@ function Invoke-SbomGeneration([string]$Workspace, [string]$OutDir) {
                         [pscustomobject]@{
                             Name    = $_.name
                             Version = $_.version
-                            Vendor  = if ($_.publisher) { $_.publisher } else { "VIPM Package" }
+                            Vendor  = Resolve-SbomVendor $_
                         }
                     })
                 }
@@ -200,27 +239,17 @@ function Invoke-SbomGeneration([string]$Workspace, [string]$OutDir) {
     }
 
 
-    # Structure document in SPDX 2.3 standard JSON format
-    $sbomDoc = @{
-        spdxVersion = "SPDX-2.3"
-        dataLicense = "CC0-1.0"
-        SPDXID      = "SPDXRef-DOCUMENT"
-        name        = "LabVIEW-Container-Dependencies"
-        packages    = $sbomPackages
-        created     = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssZ")
+    # Preserve the native VIPM/CycloneDX sbom.json emitted by VIPM.
+    if ($outPath -and (Test-Path $outPath)) {
+        Write-Host "Preserved native SBOM JSON -> $outPath" -ForegroundColor Green
     }
-
-    # Save JSON artifact
-    $jsonPath = Join-Path $OutDir "sbom.json"
-    $sbomDoc | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $jsonPath -Encoding UTF8
-    Write-Host "Wrote SPDX JSON SBOM -> $jsonPath" -ForegroundColor Green
 
     # Generate HTML Widget for Dashboard Insertion
     $htmlWidget = @"
 <div class="card sbom-card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h4>Software Bill of Materials (SBOM) - JKI VIPM Dependencies</h4>
-        <a href="sbom.json" download class="btn btn-sm btn-outline-primary">Download SPDX JSON</a>
+        <a href="sbom.json" download class="btn btn-sm btn-outline-primary">Download SBOM JSON</a>
     </div>
     <div class="card-body">
         <table class="table table-sm table-striped">

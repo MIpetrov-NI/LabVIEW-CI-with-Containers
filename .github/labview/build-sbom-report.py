@@ -23,33 +23,60 @@ from urllib.parse import quote
 
 
 # ── SBOM Parsing & Processing ────────────────────────────────────────────────
+def _supplier_from_purl(purl: str) -> str:
+    purl = str(purl or "")
+    if purl.startswith("pkg:nipkg/"):
+        return "NIPM"
+    if purl.startswith("pkg:vipm/"):
+        return "VIPM"
+    return ""
+
+
+def _supplier_name(value) -> str:
+    if isinstance(value, dict):
+        return str(value.get("name") or value.get("Name") or "")
+    return str(value or "")
+
+
 def parse_sbom(sbom_path: Path) -> dict:
-    """Parse an SPDX JSON file into a list of standardized package dictionaries."""
+    """Parse a CycloneDX or SPDX JSON file into a list of standardized package dictionaries."""
     if not sbom_path.exists():
-        return {"spdx_version": "Unknown", "packages": [], "created": ""}
+  return {"spdx_version": "Unknown", "packages": [], "created": ""}
 
     try:
         data = json.loads(sbom_path.read_text(encoding="utf-8-sig"))
     except Exception as e:
         return {
-            "spdx_version": "Unknown",
+      "spdx_version": "Unknown",
             "packages": [],
             "created": "",
             "parse_error": str(e),
         }
 
-    raw_packages = data.get("packages", [])
+    raw_packages = data.get("components", []) or data.get("packages", [])
     packages = []
     for pkg in raw_packages:
         if isinstance(pkg, dict):
+            vendor = (
+                _supplier_name(pkg.get("supplier"))
+                or _supplier_name(pkg.get("Supplier"))
+                or str(pkg.get("Vendor") or pkg.get("vendor") or "")
+                or str(pkg.get("publisher") or pkg.get("Publisher") or "")
+                or _supplier_from_purl(pkg.get("purl") or pkg.get("PURL"))
+                or "N/A"
+            )
             packages.append({
                 "name": str(pkg.get("Name") or pkg.get("name") or "Unknown Package"),
                 "version": str(pkg.get("Version") or pkg.get("version") or "Unknown"),
-                "vendor": str(pkg.get("Vendor") or pkg.get("supplier") or pkg.get("vendor") or "N/A"),
+                "vendor": str(vendor),
             })
 
     return {
-        "spdx_version": data.get("spdxVersion", "SPDX-2.3"),
+        "spdx_version": (
+            f"CycloneDX {data.get('specVersion', 'Unknown')}"
+            if data.get("bomFormat") == "CycloneDX"
+            else data.get("spdxVersion", "SPDX-2.3")
+        ),
         "created": data.get("created", ""),
         "packages": packages,
     }
