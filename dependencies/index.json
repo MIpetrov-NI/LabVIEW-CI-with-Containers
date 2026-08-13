@@ -1,0 +1,1410 @@
+{
+  "schema": 1,
+  "repo": "MIpetrov-NI/LabVIEW-CI-with-Containers",
+  "sha": "d2e8e2806db14819bcd5d12b541ed5567ff07a86",
+  "revisions": [
+    {
+      "sha": "d2e8e2806db14819bcd5d12b541ed5567ff07a86",
+      "short": "d2e8e28",
+      "message": "Merge pull request #44 from danielcoons/main",
+      "author": "MIpetrov-NI",
+      "date": "2026-08-12T20:24:21Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "50db9eef28e655d9d0e626c7ab8617802bac5788",
+      "short": "50db9ee",
+      "message": "Merge branch 'main' into main",
+      "author": "Elijah Kerry",
+      "date": "2026-08-12T16:30:35Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "cb4611eabf47ed066128b7ea5c5d7d794e819d34",
+      "short": "cb4611e",
+      "message": "Skip Pages publishing for fork pull requests",
+      "author": "elijah286",
+      "date": "2026-08-12T16:27:18Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "8f935e6e3379c89c9e08a86d8514fb05b8daee43",
+      "short": "8f935e6",
+      "message": "indentation fixes for report error",
+      "author": "MIpetrov-NI",
+      "date": "2026-08-11T16:43:36Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "5f102c241f6b32338e705a02513d701d3ef2d0f1",
+      "short": "5f102c2",
+      "message": "Correct CycloneDX SBOM componnet supplier data in the generated report.",
+      "author": "MIpetrov-NI",
+      "date": "2026-08-11T15:52:58Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "38a335472926c8d0337c9daa1cfcd63d16ab2a1d",
+      "short": "38a3354",
+      "message": "pass --allow-missing-files to override",
+      "author": "MIpetrov-NI",
+      "date": "2026-08-10T21:14:41Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "4a14d64ddd9d8a57f1e95a52eb3316b0ff0e0573",
+      "short": "4a14d64",
+      "message": "Should detect LabVIEW version installed in the container, then pass this version to VIPM CLI.",
+      "author": "MIpetrov-NI",
+      "date": "2026-08-10T20:53:03Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "34ca150dc89039426f128b89f1010e496e1cba93",
+      "short": "34ca150",
+      "message": "Error handling: SBOM workflow fails if VIPM CLI errors to avoid generating misleading output files",
+      "author": "MIpetrov-NI",
+      "date": "2026-08-10T19:57:36Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "a882308a3602eee952a3b6af04639437ee94ca1c",
+      "short": "a882308",
+      "message": "changed a VI to test the SBOM workflow trigger",
+      "author": "MIpetrov-NI",
+      "date": "2026-08-07T19:53:08Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "225dc86ea7d781a6941f9fddfb174a2b4f3f932e",
+      "short": "225dc86",
+      "message": "changed main.vi (added a comment, nuthn special) to test the sbom workflow trigger.",
+      "author": "MIpetrov-NI",
+      "date": "2026-08-07T18:43:44Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "016322233dd49f2959060b5560feb14c88c85f38",
+      "short": "0163222",
+      "message": "so i am going to try to not auto approve this accidentally",
+      "author": "daniel-coons",
+      "date": "2026-07-31T19:53:14Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "cc3ad976c36aeacc5d7d3e8651832c6cd15a48c1",
+      "short": "cc3ad97",
+      "message": "Merge branch 'elijah286:main' into main",
+      "author": "Daniel Coons",
+      "date": "2026-07-31T19:48:45Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "0c4529a9f8cf9114b58a8b4367ac18618cf5e8ac",
+      "short": "0c4529a",
+      "message": "Merge branch 'feature/#22-SBOM'",
+      "author": "daniel-coons",
+      "date": "2026-07-31T19:47:59Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "b48e95d35f8e6b5de77fad4bbe81496b64d3e8ec",
+      "short": "b48e95d",
+      "message": "Merge pull request #43 from elijah286/revert-42-feature/#22-SBOM",
+      "author": "Daniel Coons",
+      "date": "2026-07-31T19:47:09Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "fb68140557282ec69eb7056aab7fc8f67a2bf0ae",
+      "short": "fb68140",
+      "message": "Revert \"Feature/#22 SBOM\"",
+      "author": "Daniel Coons",
+      "date": "2026-07-31T19:45:47Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "8128f4a967b4293a5d4edd19028662e6a54bb847",
+      "short": "8128f4a",
+      "message": "Merge pull request #42 from danielcoons/feature/#22-SBOM",
+      "author": "Daniel Coons",
+      "date": "2026-07-31T19:40:38Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "847103e9914faeafef60d7a6bf4ce76ddd3540db",
+      "short": "847103e",
+      "message": "update of high-level automation calls file naming",
+      "author": "daniel-coons",
+      "date": "2026-07-31T19:37:39Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "7830d780250129b6ac63e2bb105243b67fc59813",
+      "short": "7830d78",
+      "message": "updated sbom generation yml",
+      "author": "daniel-coons",
+      "date": "2026-07-31T18:28:57Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "c9db59e73b37d31ea9eef71e0a22cb9fffe765f6",
+      "short": "c9db59e",
+      "message": "updated scripting based on other repo integration testing",
+      "author": "daniel-coons",
+      "date": "2026-07-31T18:27:45Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "baba8b6d5fbedf08bb20b658c4529c1f3df0f0fb",
+      "short": "baba8b6",
+      "message": "Merge pull request #2 from danielcoons/feature/#22-SBOM",
+      "author": "Daniel Coons",
+      "date": "2026-07-30T19:39:39Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "70e5dfb7cf092e18feaf0601ba43457385bbc4bc",
+      "short": "70e5dfb",
+      "message": "updated catalog json",
+      "author": "daniel-coons",
+      "date": "2026-07-30T19:37:12Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "445ff838d243286c73b792b366e961a522c8d158",
+      "short": "445ff83",
+      "message": "added sbom workflow?",
+      "author": "daniel-coons",
+      "date": "2026-07-30T19:09:34Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "0063d90f0d44c708d5f37d05403efbcafe040d46",
+      "short": "0063d90",
+      "message": "attempt at sbom helper files",
+      "author": "daniel-coons",
+      "date": "2026-07-30T19:09:10Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "e9cd54bde4867ab7e69256ea61a2efed435bdd38",
+      "short": "e9cd54b",
+      "message": "Add LabVIEW CI pipeline",
+      "author": "Daniel Coons",
+      "date": "2026-07-30T18:15:38Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "7697512d87e54653dba4cec2286a7c6750c44619",
+      "short": "7697512",
+      "message": "Docs: give \u00a716.1\u201316.6 the worked-example treatment",
+      "author": "Elijah Kerry",
+      "date": "2026-07-30T00:58:35Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "0454a45331eb5b49b8c3fa8095cf5616247cb0e7",
+      "short": "0454a45",
+      "message": "Docs: expand \u00a716.4 Unit Tests into a fully worked replication example",
+      "author": "Elijah Kerry",
+      "date": "2026-07-29T23:28:12Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "6ff3ab4fde1eda4ae8fb21e5989109e46884171f",
+      "short": "6ff3ab4",
+      "message": "Debug Run: simplify the dialog + choose operations inside the container (4.12.4)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-24T00:12:39Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "d7df7740d9ee40343bad33199dcce15b54d38738",
+      "short": "d7df774",
+      "message": "Debug Run: Linux-only dialog + \"Open the project\" as the primary action (4.12.3)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T22:51:27Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "6b55910acbedf7924c2b190c7853b205bef008f2",
+      "short": "6b55910",
+      "message": "VI Analyzer report: testing-errors banner now names the VIs + errors (4.12.2)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T22:07:19Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "2b5f4672de2dd55526a3c554e62c1a3f60fc9c1f",
+      "short": "2b5f467",
+      "message": "Windows Debug Run: enumerate all desktops+windows to locate LabVIEW's window",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T21:58:23Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "3bfb7f949a6c77cd61794ceecc29779eb5ffb804",
+      "short": "3bfb7f9",
+      "message": "VI Analyzer report: inline VI snapshots + raw report download (4.12.0)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T21:29:36Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "e43f5ee9d419348157308e9f4bed73f68766913e",
+      "short": "e43f5ee",
+      "message": "Windows Debug Run: attach to WinSta0\\Default to fix the black VNC screen",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T21:26:13Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "cdf1029da21dd3268e38db21f779033a061060d3",
+      "short": "cdf1029",
+      "message": "Release channel: stable=4.10.0 (catalog 4.11.11)",
+      "author": "github-actions[bot]",
+      "date": "2026-07-23T20:37:07Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "582a5ba0f11b6830f935c5ed19d1f0427437dcff",
+      "short": "582a5ba",
+      "message": "Windows Debug Run: surface the LabVIEW window (fix black desktop) + diagnostics",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T20:07:19Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "1b324b7c8e0e052aa91590f796a4e8ef59d3b0c1",
+      "short": "1b324b7",
+      "message": "What's New: hide the update-channel picker on the source repo (4.11.9)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T20:04:45Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "4a9e168ada79bd7b1c138579358208af87a20010",
+      "short": "4a9e168",
+      "message": "VI Analyzer report: add Windows/Linux platform toggle",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T19:36:06Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "9d71cbdbdbb9b21627cc18ae24ce5f47bae4467a",
+      "short": "9d71cbd",
+      "message": "Release channels: three tiers (Dev/Beta/Stable) + cumulative dialog picker (4.11.7)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T11:40:54Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "281af132680b33f25fff54f9c435c9d937278ef7",
+      "short": "281af13",
+      "message": "Fix: Windows noVNC \"Server is not configured properly\" (4.11.6)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T11:26:17Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "d1364e35074b0d650b5c92e818bdcdb18b319738",
+      "short": "d1364e3",
+      "message": "Fix: Windows debug tunnel died at step boundary (job object) (4.11.5)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T03:50:36Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "c2c6e9750de52a1b859ab7362f3c3aeec9f6d5f1",
+      "short": "c2c6e97",
+      "message": "Fix: Windows debug container never started (NAT host-IP) (4.11.4)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T02:49:55Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "a006257206500f277eeab098226551202da73284",
+      "short": "a006257",
+      "message": "Debug Run: \"Open source\" opens the LabVIEW project in the container (4.11.3)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T01:52:35Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "9028f67a988262ceba388097deac004cddc3d4c8",
+      "short": "9028f67",
+      "message": "Debug Run: add an \"Open source\" button (4.11.2)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T01:34:22Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "e04699df7aaa465377f6990c774e003cebbf1c97",
+      "short": "e04699d",
+      "message": "Debug Run: single form + scrollable sessions list, no step-by-step takeover (4.11.1)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T01:26:31Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "24bd13f82fb8506f1b2e8833dbb972164a934b40",
+      "short": "24bd13f",
+      "message": "Debug Run: enable Windows containers (4.11.0)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T00:29:30Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "6536ae5ddfeb2de6fadfcb8eea06c6fb1b91dd70",
+      "short": "6536ae5",
+      "message": "Release channel: stable=4.10.0 (catalog 4.10.3)",
+      "author": "github-actions[bot]",
+      "date": "2026-07-23T00:07:08Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "90e3bfa3393eb92a14e43aa694e842c9c4141628",
+      "short": "90e3bfa",
+      "message": "Release channel: stable=4.10.0 (catalog 4.10.2)",
+      "author": "github-actions[bot]",
+      "date": "2026-07-23T00:06:55Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "c96f4791ad152435e7d369bbe407238ace9d530a",
+      "short": "c96f479",
+      "message": "Debug Run: progress bar in the connect view (4.10.1)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-23T00:05:06Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "964dd4e3e0599ca4c8f53afad3d093b58ebfda15",
+      "short": "964dd4e",
+      "message": "VI Analyzer: add a Linux container runner + dual-platform report/dashboard (4.10.0)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T23:55:13Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "761b759fe35636e6fb59f68070ef75901d33e432",
+      "short": "761b759",
+      "message": "Debug Run: existing-sessions section below the form with live progress (4.9.12)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T23:47:49Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "aa15e43b889846660efbef8d8f1de8b031699111",
+      "short": "aa15e43",
+      "message": "Client discovery finds fork-based installs (4.9.11)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T23:34:15Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "42a158ca099713add297ab9c2a90e19cb4ec1165",
+      "short": "42a158c",
+      "message": "Enforce VI Browser 2.0 default on open",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T23:28:59Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "98426778b939872a256b4e7e6189b6d320bb4d31",
+      "short": "9842677",
+      "message": "Bake UI fonts into the Linux worker + render image; fix Debug Run desktop (4.9.9)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T23:28:26Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "5985c20b408861808226a1a39d70a195c7ab6848",
+      "short": "5985c20",
+      "message": "Client discovery lists genuine fork-based installs (4.9.8)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T23:25:10Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "5d174f3f689ee822828a0e9bdb82b8a936b1f56f",
+      "short": "5d174f3",
+      "message": "Release channels: stable-by-default installs/upgrades + owner promote button (4.9.7)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T23:18:08Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "1323452a691c274581ec9e4846302c386a96d0ef",
+      "short": "1323452",
+      "message": "Debug Run: live step output + live-sessions list (4.9.6)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T23:03:06Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "a2d6461c65ed2761298e06de477e4cae1b8d4b2e",
+      "short": "a2d6461",
+      "message": "Debug Run: stop the auto-refresh wiping the dialog + make it resumable (4.9.5)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T21:17:59Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "ada2b9cc39c3c80cd91950c1d8a9ca569ffdec1a",
+      "short": "ada2b9c",
+      "message": "VI Analyzer: honour a committed .viancfg by analyzing the PROJECT (4.9.4)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T20:45:31Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "2b7bdc6b0507fd295fa8a610af0ce86a09be1443",
+      "short": "2b7bdc6",
+      "message": "Builds report follows the light/dark theme like the other reports (4.9.3)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T20:28:24Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "5bc173ae60cecbcde2b9e3794140101786bc319e",
+      "short": "5bc173a",
+      "message": "VI Analyzer: don't fail the job when a completed pass hits LabVIEWCLI stderr (4.9.2)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T20:27:21Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "08a9cd8273c215c8fd570de77334022dfe78d1b0",
+      "short": "08a9cd8",
+      "message": "Dispatched report runs survive a GitHub API rate limit (4.9.1)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T19:17:26Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "0c16ff2ea08043efe8fff4736e21fe9374f5ca87",
+      "short": "0c16ff2",
+      "message": "Add Tools > Debug Run: remote into a worker over VNC (4.9.0)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T19:15:02Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "2caee1e108d23069664c1e6baff54df55d1f467f",
+      "short": "2caee1e",
+      "message": "Dashboard: never blank the good dashboard on a GitHub API rate limit (4.8.13)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T19:12:46Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "2d30ff4f73184119dc9fafdd7685a2dfa065902c",
+      "short": "2d30ff4",
+      "message": "Dependencies: version-tolerant VIPC matching + per-file missing pill (4.8.12)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T18:46:51Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "f907966a104ef930defdc2c71e2f7547bebba6d8",
+      "short": "f907966",
+      "message": "Unit Tests: make UTF project discovery robust to any repo layout (4.8.11)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T18:35:50Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "89b068029ed6384d04c2ae85a3766cc78b8b9f1a",
+      "short": "89b0680",
+      "message": "example: repoint UTF at example/Example.lvproj (fix blank Unit Tests report)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T18:26:27Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "53a0a2a8e2a9571f3452cb80de40e3105250250b",
+      "short": "53a0a2a",
+      "message": "VI Analyzer: fix PowerShell array-return bug that still blanked the report (4.8.10)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T17:52:20Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "948a581c6d947b4bc715fc9239ff0e1693d04a5a",
+      "short": "948a581",
+      "message": "Failed dashboard runs stay re-runnable and link to their report (4.8.9)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T14:41:52Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "6058776b600c02e9d31e35431c4451f4c9b3f5c4",
+      "short": "6058776",
+      "message": "Antidoc report: in-browser doc viewer (file navigator + rendered doc + images) & fix the Asciidoctor.js CDN URL (4.8.8)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T13:35:09Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "3cbe31f5c3aa67036756a7aa717a9fde974be1ff",
+      "short": "3cbe31f",
+      "message": "Default VI Browser to 2.0 when available",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T13:30:50Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "61ed2ddd21621f0afbd6e9231d9f5e27c710ce46",
+      "short": "61ed2dd",
+      "message": "Bake LV_RTE_HEADLESS=1 into the worker base image so g-cli/Antidoc run headless in NI's container (4.8.6)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T13:25:48Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "ef5fca624b03eda402f809635be71997ff4e878e",
+      "short": "ef5fca6",
+      "message": "Antidoc: set LV_RTE_HEADLESS=1 so g-cli's direct LabVIEW launch runs headless (no activation wizard) in NI's container (4.8.5)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T11:37:33Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "6313516f68c488d2bc5601aaf778f9303c2c9d53",
+      "short": "6313516",
+      "message": "dependencies: unify revision selector into the shared header context-bar picker (searchable + CI/dep filter) (4.8.4)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T11:28:00Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "34ce72c6157e39da10e594bc9446509a209c03dd",
+      "short": "34ce72c",
+      "message": "Populate history confirms before queuing a large batch (4.8.3)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T11:10:37Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "b04e7de5fac414c0ee49b8a5ceaf444585628ee0",
+      "short": "b04e7de",
+      "message": "Dependencies: review capability VIPCs + rebuild on any VIPC/Dragon change (4.8.2)",
+      "author": "lcwc",
+      "date": "2026-07-22T04:02:57Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "10faa6710988c095f78e5cd678aa1810dd1fb6dd",
+      "short": "10faa67",
+      "message": "updates to antidoc.vipc",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T03:35:09Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "b8b16c5c3ffb6259ce89e35c82b8c5839b859b3c",
+      "short": "b8b16c5",
+      "message": "Update antidoc.vipc",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T03:32:01Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "b0cc721b63bd09942dc7e5183bef250039965901",
+      "short": "b0cc721",
+      "message": "CI: per-activity concurrency groups so dispatching one activity no longer cancels another (4.8.1)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T01:14:19Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "6c500cde7a55bc67eb4cfac0e83fc24a24adb805",
+      "short": "6c500cd",
+      "message": "VI Browser 2.0 Windows renders auto-generate per revision (4.8.0)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T00:45:36Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "2a467fa693f27c3d0548035486707c2408ff2854",
+      "short": "2a467fa",
+      "message": "Purge Windows Beta / Linux Beta worker containers; Antidoc graduates to opt-in (4.7.0)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T00:36:45Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "8d01cbbbc8612ac925cb12e112fe8b6708a25f80",
+      "short": "8d01cbb",
+      "message": "Antidoc: g-cli -v verbose + kill stray LabVIEW + post-mortem probe to diagnose the launch-handshake hang (4.6.12)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T00:37:34Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "33498c4763ee90f25a1a5d1c0b714996d9ac97a5",
+      "short": "33498c4",
+      "message": "Add VI Browser coaching tip rollout",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T00:35:02Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "91a41156eb2b2cff0b15bbc61719b68a369e6c66",
+      "short": "91a4115",
+      "message": "Remove Windows Beta / Linux Beta from the dashboard surface (4.6.10)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T00:19:12Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "112a37f7384584273bef64368408a8d7ef6dfe5d",
+      "short": "112a37f",
+      "message": "Refresh the dashboard after a container update + stop false-missing tooling VIPC (4.6.9)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-22T00:06:11Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "74ec0ef99cf19ab831ac90d5c729d2107339662a",
+      "short": "74ec0ef",
+      "message": "Antidoc: give g-cli a 10-min --timeout so cold-container LabVIEW+Antidoc load doesn't trip the launch handshake (4.6.8)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T23:39:52Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "c97ea229677e3624093d25132e691264575d6fb7",
+      "short": "c97ea22",
+      "message": "dependencies: move per-file monitor checkboxes into the Windows/Linux table columns (4.6.7)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T23:36:57Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "1b825cbff05e5da1fe2844ee41cb78d1413a9c84",
+      "short": "1b825cb",
+      "message": "dashboard: keep the whole project history visible in the revision table (4.6.6)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T23:35:31Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "3c72a97b4ed618123a07b6cc834b9060c9c93cd0",
+      "short": "3c72a97",
+      "message": "dependencies: select Windows/Linux/both for container update; evaluate Linux column like Windows (4.6.5)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T23:17:35Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "fd8c52b5ad66808531691988a1b45c17f0bdaae3",
+      "short": "fd8c52b",
+      "message": "builds: open the Builds report framed in the dashboard (revision picker + Rebuild)",
+      "author": "LabVIEW CI",
+      "date": "2026-07-21T22:53:40Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "cc6e26867c4721f37a2354e97971932fd4cd01d0",
+      "short": "cc6e268",
+      "message": "dependencies: Default containers as a Windows/Linux table; drop revision cards + config note (4.6.3)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T22:43:22Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "cf198cd70ee51610e83b0d34ddb8e44ec35e5268",
+      "short": "cf198cd",
+      "message": "Antidoc: call the g-cli 'antidoc' tool with -addon lvproj (fix antidoccli.vi not found) (4.6.2)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T22:37:57Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "621cc24fdb63d8b65a5a66c7d964bda117e4aa07",
+      "short": "621cc24",
+      "message": "VI Analyzer: custom .viancfg default pass analyzes the whole project again (4.6.1)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T21:47:42Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "acaac17ce899199db13d566c620f9d8e00f37321",
+      "short": "acaac17",
+      "message": "builds: run LabVIEW build specifications (EXE/PPL/...) as a first-class capability",
+      "author": "LabVIEW CI",
+      "date": "2026-07-21T21:45:10Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "744340cab47302fe28f9a57c2d640b814a0a447a",
+      "short": "744340c",
+      "message": "deps: per-container (Windows/Linux) dependency monitoring; remove Beta columns (v4.5.0)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T21:27:15Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "6c8f6fc0a76f2ce0653810ecc45ceab8d11bf8ba",
+      "short": "6c8f6fc",
+      "message": "Merge branch 'main' of https://github.com/elijah286/LabVIEW-CI-with-Containers",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T20:54:27Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "c3394babc0e984a45c9bb2854ab5b54693b6cb29",
+      "short": "c3394ba",
+      "message": "Added a Build Spec",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T20:54:23Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "df722bc4d9724689d281af26707fdd5bff692e07",
+      "short": "df722bc",
+      "message": "Populate-history overlay: dim the host page so the report stays visible (4.4.18)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T20:52:00Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "90e22a710235970dd9cc29db9bd25585a970f559",
+      "short": "90e22a7",
+      "message": "Linux worker dependency updates reach parity with Windows (4.4.17)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T20:49:41Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "3922f5704c17f82c88bfdf3408c7e575f96a4712",
+      "short": "3922f57",
+      "message": "dependencies: global update card + collapsed file groups with status pills (#34)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T20:00:41Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "1a15012f944547f2477a9584841d65db7aac74db",
+      "short": "1a15012",
+      "message": "dependencies: visually nest package rows under VIPC files (#33)",
+      "author": "Elijah Kerry",
+      "date": "2026-07-21T19:41:27Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "40bbce9d088884bc216323827fffd81fe4b16d2e",
+      "short": "40bbce9",
+      "message": "ci: reconfigure LabVIEW CI settings (#31)",
+      "author": "github-actions[bot]",
+      "date": "2026-07-21T19:41:19Z",
+      "project": false,
+      "dep_only": false
+    },
+    {
+      "sha": "00839e49ffd3f8c73e18bb4b4d67a6df69433359",
+      "short": "00839e4",
+      "message": "Keep example VIPC in Linux-proven artifact shape (v3.39.3)",
+      "author": "Elijah Kerry",
+      "date": "2026-06-22T23:57:47Z",
+      "project": true,
+      "dep_only": true
+    },
+    {
+      "sha": "87482e2bb0ee7084a21cf5814f4f5081e862fc4e",
+      "short": "87482e2",
+      "message": "G Image moves into the core CI tooling VIPC (v3.39.2)",
+      "author": "Elijah Kerry",
+      "date": "2026-06-22T23:49:40Z",
+      "project": true,
+      "dep_only": true
+    },
+    {
+      "sha": "d56ded46d6b3c8626d3aefd616ee76ae2d4ff4c5",
+      "short": "d56ded4",
+      "message": "Restore Linux-applicable example VIPC artifact (v3.39.1)",
+      "author": "Elijah Kerry",
+      "date": "2026-06-22T23:46:25Z",
+      "project": true,
+      "dep_only": true
+    },
+    {
+      "sha": "197c1be98a17e40b88c4473157fe8aa008acbb3a",
+      "short": "197c1be",
+      "message": "Clean up dependency management around VIPC files as the source of truth (v3.39.0)",
+      "author": "Elijah Kerry",
+      "date": "2026-06-22T23:35:39Z",
+      "project": true,
+      "dep_only": true
+    },
+    {
+      "sha": "590495f94bf466cf7803e75e075177dd95b19f08",
+      "short": "590495f",
+      "message": "example: add UTF JUnit reporter deps to Dependencies.vipc",
+      "author": "Elijah Kerry",
+      "date": "2026-06-21T16:35:54Z",
+      "project": true,
+      "dep_only": true
+    },
+    {
+      "sha": "eb2240d106503d2e207374ae8e0c7119af656a45",
+      "short": "eb2240d",
+      "message": "example: run UTF tests from Example project",
+      "author": "Elijah Kerry",
+      "date": "2026-06-21T15:00:06Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "3d67c5ad9a7394f0fde051389ca3e0f45f98f5bf",
+      "short": "3d67c5a",
+      "message": "Add VIPC-baked Windows base image workflow",
+      "author": "Elijah Kerry",
+      "date": "2026-06-21T14:19:51Z",
+      "project": true,
+      "dep_only": true
+    },
+    {
+      "sha": "12553d67f22d02885acfd455c1d68381e8702aca",
+      "short": "12553d6",
+      "message": "added utf files",
+      "author": "Elijah Kerry",
+      "date": "2026-06-18T23:03:10Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "df868ea07cef49f7ed721442b627ec78ba306e7f",
+      "short": "df868ea",
+      "message": "resized the graph",
+      "author": "Elijah Kerry",
+      "date": "2026-06-01T08:20:17Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "c433e9e5e28492955ffa4d83f0434159b64d3fb7",
+      "short": "c433e9e",
+      "message": "moved a constant",
+      "author": "Elijah Kerry",
+      "date": "2026-05-29T12:38:27Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "d1705cb4e4bf97878034ace4aa9ddd2d53bf29d1",
+      "short": "d1705cb",
+      "message": "moved the send command button",
+      "author": "Elijah Kerry",
+      "date": "2026-05-29T12:27:27Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "d1a86a8741bec13cfa11446d0e72d12479a209ae",
+      "short": "d1a86a8",
+      "message": "fixed errors in motor VIs",
+      "author": "Elijah Kerry",
+      "date": "2024-11-21T22:32:29Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "2b5f1aa1c18f9777042c0f63fa7174d9c2e0d5b6",
+      "short": "2b5f1aa",
+      "message": "Minor refinements",
+      "author": "Elijah Kerry",
+      "date": "2024-11-21T17:52:34Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "3d513473c8dce75e22b08294b87de2fb37fd9798",
+      "short": "3d51347",
+      "message": "Excercise manual correction",
+      "author": "Elijah Kerry",
+      "date": "2024-11-21T17:25:43Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "1b00b2d59dd388f8fb93de6661d429025e320a6b",
+      "short": "1b00b2d",
+      "message": "Copy of excercise generated",
+      "author": "Elijah Kerry",
+      "date": "2024-11-21T17:20:04Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "f4640dad9ee5e8dcc8cdc87917e97a08f0233ba5",
+      "short": "f4640da",
+      "message": "Added new excercises",
+      "author": "Elijah Kerry",
+      "date": "2024-11-21T16:58:11Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "f96842dc7fd776c01e186bb089eb7079444390f1",
+      "short": "f96842d",
+      "message": "improved resize appearance",
+      "author": "Elijah Kerry",
+      "date": "2024-11-04T12:09:33Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "e2ee064d41e45456d7d51afd63c3fce28713fc94",
+      "short": "e2ee064",
+      "message": "mass compiled on windows",
+      "author": "Elijah Kerry",
+      "date": "2024-11-04T12:06:41Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "abb3a165d423dff26829fa296e1039bbc3903ece",
+      "short": "abb3a16",
+      "message": "Windows bug",
+      "author": "Elijah Kerry",
+      "date": "2024-11-04T11:57:48Z",
+      "project": true,
+      "dep_only": false
+    },
+    {
+      "sha": "7599b047409f6801f226b06159da3036986c5bb8",
+      "short": "7599b04",
+      "message": "debugging the assignment of visa resources to curriculum code",
+      "author": "Elijah Kerry",
+      "date": "2024-11-04T10:44:47Z",
+      "project": true,
+      "dep_only": false
+    }
+  ],
+  "config": {
+    "use": "",
+    "actions": {},
+    "vipc": [],
+    "dragon": [],
+    "hasVipcList": false,
+    "hasDragonList": false
+  },
+  "vipc": [
+    {
+      "path": ".github/labview/antidoc/antidoc.vipc",
+      "role": "capability",
+      "capability": "antidoc",
+      "tooling": false,
+      "configured": true,
+      "monitored": true,
+      "monitorOn": [
+        "windows"
+      ],
+      "locked": false,
+      "packages": [
+        "graphbuilder-2.3.0.7",
+        "jki_lib_state_machine-2024.0.3.23",
+        "jki_rsc_toolkits_palette-1.1-1",
+        "wiresmith_technology_lib_g_cli-3.0.1.98",
+        "wovalab_lib_antidoc-3.3.1.879",
+        "wovalab_lib_antidoc_add_on_labview_project_documentation-3.2.0.358",
+        "wovalab_lib_antidoc_add_on_labview_toolkit_documentation-3.0.0.77",
+        "wovalab_lib_antidoc_cli-3.4.0.126",
+        "wovalab_lib_asciidoc_for_labview-1.12.1.492"
+      ],
+      "error": ""
+    },
+    {
+      "path": ".github/labview/experimental.vipc",
+      "role": "capability",
+      "capability": "",
+      "tooling": false,
+      "configured": false,
+      "monitored": true,
+      "monitorOn": [
+        "windows"
+      ],
+      "locked": false,
+      "packages": [
+        "wovalab_lib_antidoc_cli-3.3.0.117"
+      ],
+      "error": ""
+    },
+    {
+      "path": ".github/labview/vipm/ci-tooling.vipc",
+      "role": "core",
+      "capability": "",
+      "tooling": true,
+      "configured": true,
+      "monitored": true,
+      "monitorOn": [
+        "windows",
+        "linux"
+      ],
+      "locked": true,
+      "packages": [
+        "astemes_lib_lunit-2.0.13.6",
+        "astemes_lib_lunit_cli-1.6.1.23",
+        "astemes_lib_lunit_coverage_analysis_add_on-1.0.0.2",
+        "astemes_lib_lunit_global_fixture_add_on-1.0.5.4",
+        "astemes_lib_lunit_parameterized_add_on-1.1.10.8",
+        "astemes_lib_lunit_test_inheritance_add_on-1.0.5.4",
+        "dataflow_g_lib_g_image-0.5.0.1",
+        "felipefoz_lib_lv_rainbow_terminal-1.1.1.5",
+        "jki_lib_caraya-1.4.4.148",
+        "jki_lib_state_machine-2024.0.3.23",
+        "jki_rsc_toolkits_palette-1.1-1",
+        "labview_open_source_lib_epoch_datetime-1.3.0.8",
+        "labview_open_source_project_lib_labview_open_source_palette-1.0.2.7",
+        "labview_open_source_project_lib_openuri-1.4.0.13",
+        "lvos_lib_caraya_cli_extension-2.0.0.7",
+        "ni_lib_junit_results_api-1.0.1.6",
+        "ni_lib_simple_xml-1.0.0.4",
+        "ni_lib_utf_junit_report-1.0.1.43",
+        "oglib_array-6.0.1.20",
+        "oglib_error-6.0.0.26",
+        "oglib_file-6.0.2.28",
+        "oglib_lvdata-6.0.0.45",
+        "oglib_string-6.0.2.35",
+        "pnr_lib_caraya_junit_for_azure_pipelines-1.2.0.11",
+        "pnr_lib_junit_xml-1.0.0.4",
+        "sas_workshops_lib_lunit_for_g_cli-1.2.1.85",
+        "wiresmith_technology_lib_g_cli-3.0.1.98"
+      ],
+      "error": ""
+    },
+    {
+      "path": "example/Dependencies.vipc",
+      "role": "project",
+      "capability": "",
+      "tooling": false,
+      "configured": true,
+      "monitored": true,
+      "monitorOn": [
+        "windows",
+        "linux"
+      ],
+      "locked": false,
+      "packages": [
+        "dataflow_g_lib_g_image-0.5.0.1",
+        "ni_lib_junit_results_api-1.0.1.6",
+        "ni_lib_simple_xml-1.0.0.4",
+        "ni_lib_utf_junit_report-1.0.1.43",
+        "oglib_appcontrol-4.1.0.7",
+        "oglib_array-4.1.0.13",
+        "oglib_error-4.2.0.23",
+        "oglib_file-4.0.0.20",
+        "oglib_lvdata-4.2.0.21",
+        "oglib_string-4.1.0.12"
+      ],
+      "error": ""
+    }
+  ],
+  "nipm": [
+    {
+      "name": "LabVIEW",
+      "source": "NI Package Manager",
+      "labview": true,
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "details": "LabVIEW runtime and development packages from the NI feeds."
+    },
+    {
+      "name": "VI Analyzer support",
+      "source": "NI Package Manager",
+      "packages": {
+        "windows": [
+          "ni-viawin-labview-support"
+        ],
+        "linux": [
+          "ni-vialin-labview-support"
+        ]
+      },
+      "platforms": [
+        "windows",
+        "linux"
+      ],
+      "details": "NI VI Analyzer support package used by the analyzer runners."
+    },
+    {
+      "name": "NI Unit Test Framework",
+      "source": "NI Package Manager",
+      "packages": {
+        "windows": [
+          "ni-utf-labview-support"
+        ]
+      },
+      "platforms": [
+        "windows"
+      ],
+      "details": "NI UTF support package used by the Windows unit-test runner."
+    },
+    {
+      "name": "JKI Dragon",
+      "source": "NI Package Manager",
+      "packages": {
+        "windows": [
+          "jki-dragon"
+        ]
+      },
+      "platforms": [
+        "windows"
+      ],
+      "details": "JKI Dragon dependency-management tooling installed from the LabVIEW 2026 NI Package Manager feed."
+    },
+    {
+      "name": "VI Package Manager",
+      "source": "NI Package Manager",
+      "packages": {
+        "windows": [
+          "ni-vipm"
+        ]
+      },
+      "platforms": [
+        "windows"
+      ],
+      "details": "NI-published Windows VIPM package that enables VIPC application during worker builds. Linux installs VIPM from the native Debian package during its worker build."
+    }
+  ],
+  "dragon": {
+    "available": true,
+    "column": "windows",
+    "ready": false,
+    "health": "",
+    "manifest_version": "",
+    "files": [
+      {
+        "source_file": "example/Example.dragon",
+        "labview_version": "2026",
+        "feeds": {},
+        "dependencies": [
+          {
+            "manager": "vipm",
+            "package_id": "oglib_array",
+            "declared_version": "6.0.1.20",
+            "feed_name": null,
+            "source_file": "example/Example.dragon",
+            "status": "pending",
+            "installed_version": "",
+            "message": ""
+          },
+          {
+            "manager": "vipm",
+            "package_id": "oglib_boolean",
+            "declared_version": "6.0.0.9",
+            "feed_name": null,
+            "source_file": "example/Example.dragon",
+            "status": "pending",
+            "installed_version": "",
+            "message": ""
+          }
+        ],
+        "monitored": true
+      }
+    ],
+    "install_set": [
+      {
+        "manager": "vipm",
+        "package_id": "oglib_array",
+        "declared_version": "6.0.1.20",
+        "declared_versions": [
+          "6.0.1.20"
+        ],
+        "feed_name": null,
+        "source_files": [
+          "example/Example.dragon"
+        ],
+        "conflict": false,
+        "status": "pending",
+        "installed_version": "",
+        "message": ""
+      },
+      {
+        "manager": "vipm",
+        "package_id": "oglib_boolean",
+        "declared_version": "6.0.0.9",
+        "declared_versions": [
+          "6.0.0.9"
+        ],
+        "feed_name": null,
+        "source_files": [
+          "example/Example.dragon"
+        ],
+        "conflict": false,
+        "status": "pending",
+        "installed_version": "",
+        "message": ""
+      }
+    ],
+    "conflicts": []
+  },
+  "system": [
+    {
+      "name": "VI Browser 2.0 toimages runner",
+      "source": "Repository Go code",
+      "path": ".github/labview/toimages/main.go",
+      "details": "Batch runner compiled from repo Go source; Linux uses the toimages GHCR image and Windows builds runner.exe in the workflow.",
+      "platforms": {
+        "windows": {
+          "present": true,
+          "label": "workflow-built"
+        },
+        "linux": {
+          "present": true,
+          "label": "toimages image"
+        }
+      }
+    },
+    {
+      "name": "lvctl render engine",
+      "source": "Repository Go code + embedded VIs",
+      "path": ".github/labview/toimages/_ni/labview/lvctl",
+      "details": "Renderer used by VI Browser 2.0 to drive LabVIEW and emit position-aware frame JSON.",
+      "platforms": {
+        "windows": {
+          "present": true,
+          "label": "workflow-built"
+        },
+        "linux": {
+          "present": true,
+          "label": "toimages image"
+        }
+      }
+    }
+  ],
+  "columns": [
+    {
+      "key": "windows",
+      "label": "Windows",
+      "platform": "windows",
+      "defaultTag": "latest",
+      "tag": "latest",
+      "ready": false,
+      "packages": [],
+      "failed_packages": [],
+      "nipkg_ready": false,
+      "nipkg_packages": [],
+      "labview_version": "",
+      "version": "latest"
+    },
+    {
+      "key": "linux",
+      "label": "Linux",
+      "platform": "linux",
+      "defaultTag": "latest",
+      "tag": "latest",
+      "ready": false,
+      "packages": [],
+      "failed_packages": [],
+      "nipkg_ready": false,
+      "nipkg_packages": [],
+      "labview_version": "",
+      "version": "latest"
+    }
+  ]
+}
