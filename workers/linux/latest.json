@@ -2,6 +2,6 @@
   "version": "linux-4ce478ba9bb6",
   "platform": "linux",
   "manifest_url": "https://mipetrov-ni.github.io/LabVIEW-CI-with-Containers/workers/linux/linux-4ce478ba9bb6/manifest.html",
-  "build_date": "2026-09-16T19:01:24Z",
-  "git_sha": "6acbe05a845dcc944350793a74e13ae51d71e4a4"
+  "build_date": "2026-09-16T21:01:50Z",
+  "git_sha": "ac9cade31fd8e45a7f3c310f159c670bb7c10f28"
 }
