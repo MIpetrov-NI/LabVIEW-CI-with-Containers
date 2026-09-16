@@ -1,27 +1,44 @@
-# Publish a release when the catalog version changes.
+# Version and publish every change that lands on main.
 #
-# This is what makes the TOKEN-FREE update path work for clients: a consumer pins
-# the reusable workflow / actions at the major alias (e.g. @v1) and, optionally,
-# runs Dependabot. When this repo publishes a new version, this workflow:
-#   1. creates the immutable tag  v<MAJOR>.<MINOR>.<PATCH>  + a GitHub Release, and
-#   2. force-moves the major alias  v<MAJOR>  and minor alias  v<MAJOR>.<MINOR>
-#      to the released commit.
-# So every consumer pinned at @v1 receives non-breaking improvements automatically
-# (zero changes in their repo, no token), and Dependabot can also open a reviewable
-# PR to a specific version. Creating tags/releases uses the built-in GITHUB_TOKEN —
-# no Personal Access Token is involved (a tag is a ref, not a workflow-file edit).
+# The model: publish everything, bless selectively, pin by channel. Every merge
+# becomes an immutable v<MAJOR>.<MINOR>.<PATCH> tag and a GitHub Release; which of
+# those releases is *good* is decided later and separately, by promote-release.yml
+# moving the rolling `stable` / `beta` tags.
+#
+# Nobody edits catalog.json. The next version is derived from the published TAGS,
+# never from the file, so a stale or conflicted catalog cannot roll the version of
+# record backwards -- which is exactly what happened on 2026-07-30 (e9cd54b), when
+# a hand-edited copy took the version from 4.12.4 to 4.11.10 and stalled every
+# client release for two weeks behind a tag that already existed.
+#
+# Contributors supply only two things, both optional:
+#   * a release-note fragment in .github/labview-ci/notes/ (falls back to the PR
+#     title, so forgetting one degrades gracefully instead of failing the merge)
+#   * a release:major / release:minor label on the PR (defaults to patch)
+#
+# Bumping and publishing happen in ONE run on purpose. Pushes made with the
+# built-in GITHUB_TOKEN do not trigger workflows, so a job that commits the
+# catalog and expects another workflow to notice publishes nothing -- the bug that
+# left 4.10.2, 4.10.3 and 4.11.11 in the catalog and never tagged.
 name: Release
 run-name: Release LabVIEW CI - ${{ github.event_name == 'workflow_dispatch' && 'manual run' || github.sha }}
 
 on:
   push:
     branches: [main]
-    paths:
-      - '.github/labview-ci/catalog.json'
   workflow_dispatch:
     inputs:
+      bump:
+        description: 'Which part of the version to increment'
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      note:
+        description: 'Release note (used when no fragment files are pending)'
+        type: string
+        required: false
       move_aliases:
-        description: 'Re-point the v<major> / v<major>.<minor> aliases at the current version even if the tag already exists'
+        description: 'Re-point v<major> / v<major>.<minor> even if the tag already exists'
         type: boolean
         default: false
 
@@ -30,11 +47,17 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write   # create tags + GitHub Releases (built-in token; no PAT)
+  contents: write   # tags, releases, and the catalog commit (built-in token; no PAT)
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Skip the bot's own catalog commits (belt and braces -- GITHUB_TOKEN pushes
+    # do not trigger workflows anyway) and honour an explicit opt-out.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (!contains(github.event.head_commit.message, '[skip release]') &&
+       github.event.head_commit.author.name != 'github-actions[bot]')
     steps:
       - name: Checkout (full history + tags)
         uses: actions/checkout@v5
@@ -44,115 +67,130 @@ jobs:
       - name: Validate catalog/source sync
         run: python3 .github/labview/validate-catalog-source-sync.py
 
-      - name: Tag the version and move the major/minor aliases
+      - name: Decide the bump level and the fallback note
+        id: plan
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISPATCH_BUMP: ${{ inputs.bump }}
+          DISPATCH_NOTE: ${{ inputs.note }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          BUMP="${DISPATCH_BUMP:-}"
+          NOTE="${DISPATCH_NOTE:-}"
+
+          if [ -z "$BUMP" ]; then
+            # A merged PR carries the intent: its labels choose the bump level and
+            # its title is the fallback note when no fragment was added.
+            PR=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls" \
+                   --jq '.[0] | {labels:[.labels[].name], title:.title}' 2>/dev/null || echo "")
+            if [ -n "$PR" ]; then
+              LABELS=$(printf '%s' "$PR" | python3 -c "import json,sys;print(' '.join(json.load(sys.stdin)['labels']))" 2>/dev/null || echo "")
+              # A plain `[ -z "$NOTE" ] && NOTE=...` would return 1 when NOTE is
+              # already set, which `set -e` treats as a step failure.
+              if [ -z "$NOTE" ]; then
+                NOTE=$(printf '%s' "$PR" | python3 -c "import json,sys;print(json.load(sys.stdin)['title'])" 2>/dev/null || echo "")
+              fi
+              case " $LABELS " in
+                *" release:major "*) BUMP=major ;;
+                *" release:minor "*) BUMP=minor ;;
+                *" release:patch "*) BUMP=patch ;;
+              esac
+            fi
+          fi
+
+          # Direct pushes to main have no PR, so fall back to the commit message.
+          if [ -z "$BUMP" ]; then
+            case "$COMMIT_MSG" in
+              *"[major]"*) BUMP=major ;;
+              *"[minor]"*) BUMP=minor ;;
+              *)           BUMP=patch ;;
+            esac
+          fi
+          [ -n "$NOTE" ] || NOTE=$(printf '%s' "${COMMIT_MSG:-}" | head -1)
+
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          { echo "note<<EOF"; printf '%s\n' "$NOTE"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+          echo "Bump level: $BUMP"
+          echo "Fallback note: $NOTE"
+
+      - name: Write the next version into the catalog
+        id: apply
+        env:
+          # Via env, never interpolated into the script: the fallback note is a
+          # pull-request title, which anyone opening a fork PR controls. Inlined
+          # as ${{ }} it would be shell-injectable.
+          BUMP: ${{ steps.plan.outputs.bump }}
+          NOTE: ${{ steps.plan.outputs.note }}
+        run: |
+          set -euo pipefail
+          python3 .github/labview/version.py apply --bump "$BUMP" --fallback-note "$NOTE" | tee /tmp/apply.txt
+          grep '^version=' /tmp/apply.txt >> "$GITHUB_OUTPUT"
+          # Fragments are consumed by this release. Deleting them on disk is
+          # enough -- the commit step stages the notes directory with `git add -A`.
+          #
+          # `|| true`: a release with no pending fragments is normal (it falls back
+          # to the PR title), and under `set -e` a grep that matches nothing exits 1
+          # and kills the step. That is exactly how the first protected run failed.
+          grep '^fragment=' /tmp/apply.txt | cut -d= -f2- > /tmp/fragments.txt || true
+          while read -r f; do
+            if [ -n "$f" ]; then rm -f "$f"; fi
+          done < /tmp/fragments.txt
+
+      - name: Re-validate before committing
+        run: python3 .github/labview/validate-catalog-source-sync.py
+
+      - name: Commit the catalog to main
+        env:
+          VERSION: ${{ steps.apply.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A .github/labview-ci/catalog.json .github/labview-ci/notes
+          if git diff --cached --quiet; then
+            echo "::error::version.py produced no catalog change"; exit 1
+          fi
+          git commit -m "Release ${VERSION} [skip release]"
+          # main is hot: another merge may land between checkout and push.
+          # Rebasing is safe because this commit only touches the catalog and the
+          # consumed note fragments.
+          for i in 1 2 3 4 5; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then echo "pushed"; exit 0; fi
+            echo "push rejected (attempt $i); rebasing onto the latest ${GITHUB_REF_NAME}"
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}" || { echo "::error::rebase conflict on the catalog"; exit 1; }
+            sleep 3
+          done
+          echo "::error::could not push the catalog after retries"; exit 1
+
+      - name: Tag, move aliases, publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORCE_ALIASES: ${{ inputs.move_aliases }}
+        run: bash .github/labview/publish-release.sh
+
+      - name: Synchronize the GitLab distribution mirror
+        id: gitlab_mirror
+        if: vars.GITLAB_MIRROR_ENABLED == 'true'
+        # The release is fully published by this point, so a mirror hiccup (bad
+        # token, GitLab outage) must not paint the whole run red — that reads as
+        # a broken release on the dashboard when nothing about the release
+        # failed. The step below turns the failure into a warning instead, and
+        # sync-gitlab-distribution.yml re-pushes the same tag once the cause is
+        # fixed.
+        continue-on-error: true
+        env:
+          GITLAB_MIRROR_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+          GITLAB_MIRROR_USERNAME: ${{ vars.GITLAB_MIRROR_USERNAME }}
+        run: .github/labview-ci/sync-gitlab-mirror.sh
+
+      - name: Warn when the mirror sync failed
+        if: steps.gitlab_mirror.outcome == 'failure'
         run: |
-          set -euo pipefail
-          CAT=.github/labview-ci/catalog.json
-          VER=$(python3 -c "import json;print(json.load(open('$CAT'))['version'])")
-          case "$VER" in
-            [0-9]*.[0-9]*.[0-9]*) : ;;
-            *) echo "::error::catalog version '$VER' is not MAJOR.MINOR.PATCH"; exit 1 ;;
-          esac
-          MAJOR=${VER%%.*}; REST=${VER#*.}; MINOR=${REST%%.*}
-          TAG="v${VER}"; MAJOR_ALIAS="v${MAJOR}"; MINOR_ALIAS="v${MAJOR}.${MINOR}"
-          echo "version=$VER  tag=$TAG  aliases=$MAJOR_ALIAS,$MINOR_ALIAS"
-
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          NEW_TAG=false
-          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
-            echo "Tag ${TAG} already exists."
-          else
-            git tag -a "${TAG}" -m "LabVIEW CI ${TAG}"
-            git push origin "${TAG}"
-            NEW_TAG=true
-            echo "Created tag ${TAG}."
-          fi
-
-          # Move the major + minor aliases to this commit (the moving-alias contract:
-          # @v1 always points at the latest non-breaking release).
-          if [ "$NEW_TAG" = "true" ] || [ "${FORCE_ALIASES}" = "true" ]; then
-            for A in "$MAJOR_ALIAS" "$MINOR_ALIAS"; do
-              git tag -f "$A" "$TAG^{}"
-              git push -f origin "$A"
-              echo "Moved alias ${A} -> ${TAG}."
-            done
-          fi
-
-          # Release channel: force-move the rolling `stable` tag to the blessed
-          # release. `stableVersion` is set by the promote-release workflow (the
-          # owner's "Mark as stable release" button); it's absent until the first
-          # promotion, in which case this is a no-op. Idempotent: only moves the
-          # tag when it isn't already at v<stableVersion>.
-          STABLE=$(python3 -c "import json;print(json.load(open('$CAT')).get('stableVersion',''))")
-          if [ -n "$STABLE" ]; then
-            if git rev-parse -q --verify "refs/tags/v${STABLE}^{}" >/dev/null; then
-              WANT=$(git rev-parse "v${STABLE}^{}")
-              HAVE=$(git rev-parse -q --verify "refs/tags/stable^{}" 2>/dev/null || echo "")
-              if [ "$WANT" != "$HAVE" ]; then
-                git tag -f stable "v${STABLE}^{}"
-                git push -f origin stable
-                echo "Moved rolling 'stable' tag -> v${STABLE}."
-              else
-                echo "Rolling 'stable' tag already at v${STABLE}."
-              fi
-            else
-              echo "::warning::stableVersion ${STABLE} has no v${STABLE} tag yet; leaving 'stable' unchanged."
-            fi
-          fi
-
-          # Same for the rolling `beta` tag (the release-candidate channel), driven
-          # by `betaVersion`. Absent until a beta is marked -> no-op.
-          BETA=$(python3 -c "import json;print(json.load(open('$CAT')).get('betaVersion',''))")
-          if [ -n "$BETA" ]; then
-            if git rev-parse -q --verify "refs/tags/v${BETA}^{}" >/dev/null; then
-              WANTB=$(git rev-parse "v${BETA}^{}")
-              HAVEB=$(git rev-parse -q --verify "refs/tags/beta^{}" 2>/dev/null || echo "")
-              if [ "$WANTB" != "$HAVEB" ]; then
-                git tag -f beta "v${BETA}^{}"
-                git push -f origin beta
-                echo "Moved rolling 'beta' tag -> v${BETA}."
-              else
-                echo "Rolling 'beta' tag already at v${BETA}."
-              fi
-            else
-              echo "::warning::betaVersion ${BETA} has no v${BETA} tag yet; leaving 'beta' unchanged."
-            fi
-          fi
-
-          # Build release notes from the catalog's newest history entry.
-          python3 - "$CAT" > /tmp/relnotes.md <<'PY'
-          import json, sys
-          c = json.load(open(sys.argv[1], encoding='utf-8'))
-          rels = (c.get('history') or {}).get('releases') or []
-          rel = rels[0] if rels else {}
-          out = []
-          if rel.get('summary'): out += [rel['summary'], '']
-          for h in rel.get('highlights') or []: out.append(f'- {h}')
-          out += ['', 'Consumers pinned at the major alias (e.g. `@v%s`) receive this automatically.'
-                  % (str(c.get('version','1')).split('.')[0])]
-          open('/tmp/reltitle.txt','w').write(rel.get('title') or f"LabVIEW CI {c.get('version','')}")
-          print('\n'.join(out))
-          PY
-
-          if gh release view "${TAG}" >/dev/null 2>&1; then
-            gh release edit "${TAG}" --title "$(cat /tmp/reltitle.txt)" --notes-file /tmp/relnotes.md
-            echo "Updated release ${TAG}."
-          else
-            gh release create "${TAG}" --target "$GITHUB_SHA" \
-              --title "$(cat /tmp/reltitle.txt)" --notes-file /tmp/relnotes.md
-            echo "Published release ${TAG}."
-          fi
-
+          echo "::warning title=GitLab mirror not synchronized::The release published, but the push to the GitLab distribution mirror failed. Fix the cause (usually GITLAB_MIRROR_TOKEN), then dispatch 'Sync GitLab Distribution' with this release's tag."
           {
-            echo "## Released ${TAG}"
+            echo "## GitLab mirror NOT synchronized"
             echo ""
-            echo "- Immutable tag \`${TAG}\` published."
-            echo "- Aliases \`${MAJOR_ALIAS}\` and \`${MINOR_ALIAS}\` now point at \`${TAG}\`."
-            echo ""
-            echo "Consumers pinned at \`@${MAJOR_ALIAS}\` get this update automatically — no token, no action."
+            echo "The release itself published. Once the cause is fixed (usually \`GITLAB_MIRROR_TOKEN\`), re-push it by dispatching the **Sync GitLab Distribution** workflow with this release's tag."
           } >> "$GITHUB_STEP_SUMMARY"

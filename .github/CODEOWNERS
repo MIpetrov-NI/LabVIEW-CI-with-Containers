@@ -1,0 +1,34 @@
+# Review gate for the LabVIEW CI release machinery.
+#
+# This repository is the tooling SOURCE for every installed client. catalog.json
+# in particular is the version of record: release.yml reads it to cut the tag and
+# force-move the v<major> alias that clients pin to, so an edit here publishes to
+# all of them. These paths are never routine changes.
+#
+# NOTE: CODEOWNERS does nothing until "Require a pull request before merging" and
+# "Require review from Code Owners" are enabled for main under
+# Settings > Branches > Branch protection rules. See .github/CONTRIBUTING.md.
+
+# The version of record and the client-redirect pointer.
+/.github/labview-ci/catalog.json                    @elijah286
+/.github/labview-ci/source.json                     @elijah286
+
+# Release + publishing workflows.
+/.github/workflows/release.yml                      @elijah286
+/.github/workflows/promote-release.yml              @elijah286
+/.github/workflows/catalog-source-sync.yml          @elijah286
+/.github/workflows/discover-clients.yml             @elijah286
+/.github/workflows/integrate-deploy.yml             @elijah286
+
+# The guard that enforces all of the above, and the machinery that derives and
+# publishes versions. Release-note fragments under notes/ are deliberately NOT
+# owned -- they are the one part of the release any contributor should be adding.
+/.github/labview/validate-catalog-source-sync.py    @elijah286
+/.github/labview/promote-release.py                 @elijah286
+/.github/labview/version.py                         @elijah286
+/.github/labview/publish-release.sh                 @elijah286
+
+# The configurator/installer pages clients are served.
+/.github/pages/integrate.html                       @elijah286
+/.github/pages/configure.html                       @elijah286
+/.github/pages/whats-new.html                       @elijah286

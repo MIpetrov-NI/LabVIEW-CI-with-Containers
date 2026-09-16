@@ -97,7 +97,7 @@ jobs:
           NEWVER=$(python3 -c "import json;print(json.load(open('$CAT'))['version'])")
           STABLE=$(python3 -c "import json;print(json.load(open('$CAT')).get('stableVersion',''))")
           git add "$CAT"
-          git commit -m "Release channel: stable=${STABLE:-none} (catalog ${NEWVER})"
+          git commit -m "Release channel: stable=${STABLE:-none} (catalog ${NEWVER}) [skip release]"
           # The default branch is hot; rebase-and-retry a few times on a non-FF push.
           for i in 1 2 3 4 5; do
             if git push origin "HEAD:${GITHUB_REF_NAME}"; then echo "pushed"; exit 0; fi
@@ -108,14 +108,28 @@ jobs:
           done
           echo "::error::could not push the promotion after retries"; exit 1
 
+      # Publish INSIDE this run. This step used to be absent: the job pushed the
+      # catalog with the built-in GITHUB_TOKEN and relied on release.yml noticing,
+      # but GITHUB_TOKEN pushes do not trigger workflows. So every promotion bumped
+      # the catalog to a version that was never tagged and never released --
+      # 4.10.2, 4.10.3 and 4.11.11 are all phantoms created exactly this way, and
+      # the rolling tag never moved either (the `beta` tag sat on v4.11.8 for
+      # three weeks while betaVersion said 4.11.10).
+      - name: Tag, move the channel tag, publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash .github/labview/publish-release.sh
+
       - name: Summary
         if: always()
         run: |
           CAT=.github/labview-ci/catalog.json
           STABLE=$(python3 -c "import json;print(json.load(open('$CAT')).get('stableVersion',''))" 2>/dev/null || echo "")
+          BETA=$(python3 -c "import json;print(json.load(open('$CAT')).get('betaVersion',''))" 2>/dev/null || echo "")
           {
             echo "## Release channel updated"
             echo ""
             echo "- Stable version is now: \`${STABLE:-none}\`"
-            echo "- release.yml will move the rolling \`stable\` tag to the blessed commit."
+            echo "- Beta version is now: \`${BETA:-none}\`"
+            echo "- The rolling tag was moved in this run."
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,83 @@
+# Contributing to LabVIEW CI
+
+This repository is the **tooling source**, not a client. Every repo listed on the
+dashboard's Clients page installs from here, so a few things behave differently
+than they would in a normal project.
+
+## This repo is not a place to install the pipeline
+
+The **LabVIEW CI configurator** (the "Integrate this CI pipeline" page) is a
+*client installer*. It vendors a tooling payload pinned to a released version and
+deletes files it does not recognise as current tooling.
+
+This repository carries release machinery that no client has — `release.yml`,
+`promote-release.py`, `discover-clients.yml`, the configurator pages themselves.
+So running the configurator against this repo **or a fork of it** deletes that
+machinery and overwrites `catalog.json` with an older version.
+
+That is not hypothetical. On 2026-07-30 an install pinned at v4.11.10 landed on a
+fork, downgraded the catalog from 4.12.4, removed 48 source-only files, and
+stopped all client releases for two weeks.
+
+The configurator now refuses this, and `catalog-source-sync` fails the PR if the
+source-only files go missing. **To test the pipeline, install it into a separate
+scratch repository.**
+
+## Never edit `catalog.json`
+
+`.github/labview-ci/catalog.json` → `version` is the version of record: the
+release workflow reads it to cut the `v<MAJOR>.<MINOR>.<PATCH>` tag and force-move
+the `v<MAJOR>` alias every client pins to. It is release machinery, not a config
+file, and **CI owns it**. You should never have it open.
+
+Every merge to main is published automatically. CI derives the next version from
+the highest published **tag** — never from the file — so a stale or conflicted
+catalog cannot roll the version backwards. That's deliberate: on 2026-07-30 a
+hand-edited copy took the version from 4.12.4 to 4.11.10 and stalled every client
+release for two weeks.
+
+What you supply instead, both optional:
+
+**A release note.** Drop a `.md` file in `.github/labview-ci/notes/` describing
+your change in prose, as a client would read it. One file per PR, so two PRs can
+never conflict. CI folds pending fragments into the release and deletes them. See
+[the notes README](labview-ci/notes/README.md). Forget one and the release still
+happens, falling back to your PR title.
+
+**A bump level.** Label the PR `release:minor` for a new capability or
+`release:major` for a breaking change. No label means patch, which is right most
+of the time. Major moves `@v<major>`, so it should be rare.
+
+To land something without publishing, put `[skip release]` in the merge commit
+message — but use it sparingly. Everything being published is what makes
+retroactive promotion to beta and stable work.
+
+## Channels, not version numbers, carry risk
+
+Publishing is automatic and unconditional. Deciding a version is *good* is a
+separate, manual, retroactive act: `promote-release.yml` moves the rolling
+`stable` and `beta` tags to an already-published release. Nothing is rebuilt.
+
+So don't agonise over a version number — it's a counter. The thing that decides
+what a client actually receives is which release the channel points at.
+
+## Reverts
+
+If a PR is reverted, do **not** bring it back by merging main into your fork and
+re-merging your branch — git treats the reverted commits as already merged, so
+they silently return. Revert the revert (`git revert <revert-sha>`) on a fresh
+branch, fix the actual problem, and open a new PR.
+
+This is how the 2026-07-30 downgrade came back seven minutes after it was fixed.
+
+## Repository settings this relies on
+
+The guards are only as good as the branch rules that enforce them. On `main`,
+under **Settings › Branches › Branch protection rules**:
+
+- Require a pull request before merging
+- Require review from Code Owners (activates `.github/CODEOWNERS`)
+- Require status checks to pass → **`Catalog Source Sync`**
+
+Without the required status check, `catalog-source-sync` reports a failure that
+nothing acts on.

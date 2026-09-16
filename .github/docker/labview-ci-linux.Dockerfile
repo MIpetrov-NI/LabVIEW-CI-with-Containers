@@ -9,6 +9,7 @@
 # =============================================================================
 
 ARG VIPM_DEB_URL=https://traffic.libsyn.com/secure/jkinc/vipm_26.3.0-3954_amd64.deb
+ARG LV_CONTAINER_TAG=2026q1patch2-linux
 
 # ---- build stage: compile the VI Browser 2.0 render engine (lvctl + runner) ---
 # Mirrors .github/labview/toimages/Dockerfile so the engine is byte-for-byte the
@@ -29,7 +30,11 @@ COPY .github/labview/toimages/main.go ./
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -o /out/runner .
 
 # ---- worker image ------------------------------------------------------------
-FROM nationalinstruments/labview:latest-linux
+# Pinned NI container release, passed by build-labview-linux-image.yml from the
+# catalog's containers[] entry - never float on latest-linux (see the Windows
+# base Dockerfile for the 2026-07-27 latest-tag incident this prevents). The
+# default here only covers ad-hoc local builds.
+FROM nationalinstruments/labview:${LV_CONTAINER_TAG}
 
 ARG VIPM_DEB_URL
 ARG CI_WORKER_VERSION=dev
@@ -42,7 +47,7 @@ RUN set -eux; \
       chmod +x /opt/lvci/vipm/install-vipc-linux.sh; \
       export DEBIAN_FRONTEND=noninteractive; \
       apt-get update; \
-      apt-get install -y --no-install-recommends ca-certificates curl xvfb \
+                  apt-get install -y --no-install-recommends ca-certificates curl unzip xvfb \
         fonts-dejavu-core fonts-liberation fonts-noto-core xfonts-base xfonts-75dpi xfonts-100dpi fontconfig; \
       fc-cache -f >/dev/null 2>&1 || true; \
       curl -fL --retry 3 --retry-delay 2 -o /tmp/vipm.deb "${VIPM_DEB_URL}"; \

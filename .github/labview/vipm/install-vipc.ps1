@@ -54,6 +54,19 @@ $PublicRepoUrl    = if ($Env:VIPM_PUBLIC_REPO_URL) { $Env:VIPM_PUBLIC_REPO_URL }
 $Env:VIPM_NONINTERACTIVE    = '1'
 $Env:VIPM_ASSUME_YES        = '1'
 $Env:NO_COLOR               = '1'
+# The worker base bakes ENV LV_RTE_HEADLESS=1 so g-cli/Antidoc run headless in
+# the finished image at CI time. But the VIPM Desktop engine this script launches
+# is ITSELF a LabVIEW-runtime app: with that global headless default it never
+# completes the startup handshake the vipm CLI waits on, and every operation
+# dies with 'wait for VIPM startup timed out' (the failure that broke all
+# Windows dependency bakes after 2026-07-22 baked the variable in). Clear it for
+# this process tree only - the image keeps the baked ENV for runtime workflows,
+# and the headless LabVIEW below is launched with an explicit --headless flag,
+# which does not depend on this variable.
+if ($Env:LV_RTE_HEADLESS) {
+    Write-Host "Clearing LV_RTE_HEADLESS=$($Env:LV_RTE_HEADLESS) for the VIPM install (the VIPM Desktop engine cannot start under a global headless default; the baked image ENV is unaffected)."
+    Remove-Item Env:LV_RTE_HEADLESS -ErrorAction SilentlyContinue
+}
 # Turn on VIPM's verbose debug log so a failing build records WHY an install
 # fails - e.g. why `vipm refresh` reports success yet `vipm install <name>`
 # returns exit 3 "package not found" (an empty resolver index), and why applying
@@ -84,6 +97,15 @@ if ($PublicRepoUrl -match 'github\.com[:/]+(?<owner>[^/]+)/(?<name>[^/]+?)(?:\.g
 # overrides the default/CI-adjusted timeout, in seconds.
 # See docs.vipm.io/latest/cli/environment-variables.
 $Env:VIPM_TIMEOUT           = if ($Env:VIPM_TIMEOUT) { $Env:VIPM_TIMEOUT } else { '900' }
+# Large packages (wovalab_lib_asciidoc_for_labview is the repeat offender) run
+# post-install actions where VIPM Desktop is silently busy for minutes. The CLI's
+# default 60s liveliness watchdog then aborts a HEALTHY install with "VIPM
+# command 'package_set_install' made no progress for 60.0s - VIPM Desktop may be
+# stuck" (exit 124); whether a bake survived was pure timing (the source repo's
+# validation bake squeaked past the same error a client bake failed on 3/3
+# retries). Tolerate long silences up to the same ceiling as VIPM_TIMEOUT - the
+# per-operation timeout still bounds a genuinely stuck install.
+$Env:VIPM_DESKTOP_LIVELINESS_TIMEOUT = if ($Env:VIPM_DESKTOP_LIVELINESS_TIMEOUT) { $Env:VIPM_DESKTOP_LIVELINESS_TIMEOUT } else { $Env:VIPM_TIMEOUT }
 
 # VIPM 26.3 Community Edition shells out to a real `git` binary to verify that the
 # working directory is a PUBLIC Git repository (see New-PublicRepoWorkdir below). The
@@ -95,6 +117,38 @@ foreach ($gitDir in @('C:\git\cmd', 'C:\Program Files\Git\cmd')) {
         $Env:Path = "$gitDir;$Env:Path"
     }
 }
+
+# -- 0. Container memory preflight --------------------------------------------
+# This script runs the whole VIPM stack at once: headless LabVIEW (~300 MB) +
+# the VIPM Desktop engine (>1.3 GB peak during its package-list refresh on
+# LabVIEW 2026 Q3) + the vipm CLI. A memory-capped container (Windows `docker
+# build` can default to a low cap; `docker run` does not) starves the engine so
+# it never finishes starting -- presenting as the same silent 'Operation "wait
+# for VIPM startup" timed out after 900s' the Aug 2026 LV_RTE_HEADLESS outage
+# produced, with zero distinguishing symptoms. Name the condition up front and
+# fail fast instead of wedging: the build workflows pass `docker build -m 8GB`,
+# so tripping this means that flag was lost or the host is genuinely too small.
+# VIPM_ALLOW_LOW_MEMORY=1 proceeds anyway.
+try {
+    $memMB = [int]((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1KB)
+    Write-Host ("Container memory visible: {0:N0} MB" -f $memMB)
+    if ($memMB -lt 2560) {
+        $memMsg = ("Only {0:N0} MB of memory is visible to this container, but the VIPM stack " -f $memMB) +
+            "(headless LabVIEW + VIPM Desktop engine + CLI) needs well over 2 GB - the engine will hang at " +
+            "'wait for VIPM startup' long before any package installs. If this is a docker build step, pass " +
+            "'docker build -m 8GB' (Windows build containers are memory-capped by default; docker run containers are not). " +
+            "Set VIPM_ALLOW_LOW_MEMORY=1 to attempt the install anyway."
+        if ($Env:VIPM_ALLOW_MISSING_PACKAGES -eq '1' -or $Env:VIPM_ALLOW_LOW_MEMORY -eq '1') {
+            Write-Warning $memMsg
+        } else {
+            Write-Error $memMsg
+            exit 1
+        }
+    } elseif ($memMB -lt 4096) {
+        Write-Warning (("Only {0:N0} MB of memory is visible to this container; the VIPM stack peaks near that. " -f $memMB) +
+            "If installs time out at 'wait for VIPM startup', raise the docker build memory limit (-m 8GB).")
+    }
+} catch { Write-Host ("Memory preflight skipped: " + $_.Exception.Message) }
 
 # -- 1. Install VIPM if not already present -----------------------------------
 # VIPM is normally pre-installed into the image by labview-ci.Dockerfile, which
@@ -314,13 +368,20 @@ function Start-VipmEngineProcess {
 # fail-fast-on-first-wedge behavior).
 $script:VipmMaxEngineRestarts  = if ($Env:VIPM_MAX_ENGINE_RESTARTS -match '^\d+$') { [int]$Env:VIPM_MAX_ENGINE_RESTARTS } else { 2 }
 $script:VipmEngineRestartsUsed = 0
+# Refresh is the first engine health check. Give a transient cold-start race one
+# clean retry, but do not let a dead engine spend another hour in install calls.
+$script:VipmMaxRefreshRestarts  = if ($Env:VIPM_MAX_REFRESH_RESTARTS -match '^\d+$') { [int]$Env:VIPM_MAX_REFRESH_RESTARTS } else { 1 }
+$script:VipmRefreshRestartsUsed = 0
 
 # Kill the whole VIPM stack (CLI, engine, headless LabVIEW) and relaunch it, then
 # clear the wedged flag so the caller can retry. If the relaunched engine wedges
 # again the next 'vipm install' re-sets the flag and the budget check stops the loop.
 function Restart-VipmStack {
-    param([int] $Attempt)
-    Write-Warning ("  VIPM engine wedged; restarting the VIPM stack (attempt " + $Attempt + "/" + $script:VipmMaxEngineRestarts + ") and retrying ...")
+    param(
+        [int] $Attempt,
+        [int] $Maximum = $script:VipmMaxEngineRestarts
+    )
+    Write-Warning ("  VIPM engine wedged; restarting the VIPM stack (attempt " + $Attempt + "/" + $Maximum + ") and retrying ...")
     foreach ($procName in @('vipm', 'VI Package Manager', 'LabVIEW', 'LabVIEWCLI')) {
         Get-Process -Name $procName -ErrorAction SilentlyContinue |
             Stop-Process -Force -ErrorAction SilentlyContinue
@@ -815,6 +876,34 @@ function Install-VipmSpecs {
     }
 }
 
+# A refresh timeout that specifically says the VIPM Desktop startup handshake
+# failed means installs will hit the same wall. Retry from a fresh process stack
+# once, then mark the engine unavailable so no package install can add 15-minute
+# waits after the failed health check.
+function Invoke-VipmRefresh {
+    while ($true) {
+        $out = & $VipmExe refresh --force 2>&1
+        $out | Out-Host
+        $refreshExit = $LASTEXITCODE
+        $refreshOutput = ($out | Out-String -Width 8192)
+        $flatRefreshOutput = ($refreshOutput -replace '\s+', ' ')
+        $startupTimedOut = $flatRefreshOutput -match 'wait for VIPM startup'
+        if (-not $startupTimedOut) { return $refreshExit }
+
+        if ($script:VipmRefreshRestartsUsed -ge $script:VipmMaxRefreshRestarts) {
+            $script:VipmEngineDead = $true
+            Write-Warning ('VIPM Desktop never completed its startup handshake during package-source refresh. ' +
+                'Skipping package installs because they would time out against the same engine.')
+            return $refreshExit
+        }
+
+        $script:VipmRefreshRestartsUsed++
+        Restart-VipmStack $script:VipmRefreshRestartsUsed $script:VipmMaxRefreshRestarts
+        Write-Host ("Retrying VIPM package-source refresh after engine restart " +
+            $script:VipmRefreshRestartsUsed + "/" + $script:VipmMaxRefreshRestarts + " ...")
+    }
+}
+
 # Refresh all package sources once (best-effort - a refresh failure is only a warning
 # because version-pinned installs can still resolve from the local cache).
 #
@@ -894,7 +983,12 @@ try {
     # a plain `vipm refresh` reported "complete" but downloaded no specs, so every
     # package resolved as "not found" (exit 3). --force re-fetches the index.
     Write-Host 'Refreshing VIPM package sources (vipm refresh --force) ...'
-    & $VipmExe refresh --force 2>&1 | Out-Host
+    $refreshExit = Invoke-VipmRefresh
+    if ($script:VipmEngineDead) {
+        $applyFailed = $true
+    } elseif ($refreshExit -ne 0) {
+        Write-Warning "VIPM package-source refresh failed (exit $refreshExit); continuing because version-pinned installs can use the local cache."
+    }
 
     # Phase A (REQUIRED, installed FIRST): the UTF JUnit essentials the built-in
     # 'LabVIEWCLI -OperationName RunUnitTests' operation links against. Install them
@@ -909,7 +1003,10 @@ try {
     $requiredSpecs = @($requiredRaw -split '[,;]' | ForEach-Object { $_.Trim() } | Where-Object { $_ -and $_ -ne '-' })
     if ($requiredSpecs.Count -gt 0) {
         Write-Host ("Installing REQUIRED UTF essentials first: " + ($requiredSpecs -join ', '))
-        if (Install-VipmSpecs $requiredSpecs) {
+        if ($script:VipmEngineDead) {
+            Write-Warning 'Skipping REQUIRED UTF essentials because VIPM Desktop did not start during the refresh health check.'
+            $applyFailed = $true
+        } elseif (Install-VipmSpecs $requiredSpecs) {
             Write-Host 'REQUIRED UTF essentials installed.'
         } else {
             Write-Warning 'One or more REQUIRED UTF essentials failed to install; headless UTF (RunUnitTests) will fail with -350053.'
@@ -1028,10 +1125,16 @@ if ($VipmEngineProc -and -not $VipmEngineProc.HasExited) {
 }
 
 if ($applyFailed) {
-    $message = ('One or more REQUIRED VIPM packages could not be installed (a project .vipc ' +
-        'dependency or a UTF JUnit essential the RunUnitTests CLI links against). Headless UTF ' +
-        'may fail with LabVIEW CLI error -350053, or project VIs may not load. Check the install ' +
-        'log above for the failing package(s) and confirm they exist on the configured VIPM repository.')
+    if ($script:VipmEngineDead) {
+        $message = ('VIPM Desktop did not complete its startup handshake after the bounded refresh recovery. ' +
+            'No package install was attempted against the unresponsive engine. This is an engine-startup failure, ' +
+            'not a package-resolution failure; rerun the worker-image build on a fresh runner.')
+    } else {
+        $message = ('One or more REQUIRED VIPM packages could not be installed (a project .vipc ' +
+            'dependency or a UTF JUnit essential the RunUnitTests CLI links against). Headless UTF ' +
+            'may fail with LabVIEW CLI error -350053, or project VIs may not load. Check the install ' +
+            'log above for the failing package(s) and confirm they exist on the configured VIPM repository.')
+    }
     if ($Env:VIPM_ALLOW_MISSING_PACKAGES -eq '1') {
         Write-Warning ($message + ' VIPM_ALLOW_MISSING_PACKAGES=1 is set, so the image build will continue without those packages.')
         exit 0

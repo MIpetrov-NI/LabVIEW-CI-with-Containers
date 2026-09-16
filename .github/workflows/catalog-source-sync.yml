@@ -1,22 +1,16 @@
 name: Catalog Source Sync
 run-name: Catalog/source sync - ${{ github.event_name == 'workflow_dispatch' && 'manual run' || github.sha }}
 
+# Deliberately NOT path-filtered. The validator now also guards against the
+# source repo's own publishing machinery being deleted, and a PR that deletes
+# those files may touch none of the paths a filter would list -- the filter is
+# the very thing that would let it through. This is a ~10s Python run, so it is
+# cheap enough to gate every pull request. Make it a REQUIRED status check on
+# main (Settings > Branches) so the guard actually blocks a merge.
 on:
   pull_request:
-    paths:
-      - '.github/labview-ci/catalog.json'
-      - '.github/labview/validate-catalog-source-sync.py'
-      - '.github/docker/**'
-      - '.github/workflows/build-labview-image.yml'
-      - '.github/workflows/catalog-source-sync.yml'
   push:
     branches: [main]
-    paths:
-      - '.github/labview-ci/catalog.json'
-      - '.github/labview/validate-catalog-source-sync.py'
-      - '.github/docker/**'
-      - '.github/workflows/build-labview-image.yml'
-      - '.github/workflows/catalog-source-sync.yml'
   workflow_dispatch:
 
 permissions:
@@ -28,5 +22,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          # fetch-depth: 0 brings the tags. The validator compares the catalog
+          # version against the highest published v<major>.<minor>.<patch> tag to
+          # prove the version of record never moves backwards; without tags that
+          # check cannot run, and it fails loudly in CI rather than skipping.
+          fetch-depth: 0
       - name: Validate catalog/source sync
         run: python3 .github/labview/validate-catalog-source-sync.py

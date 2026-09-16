@@ -23,6 +23,7 @@ published release, so a workflow can gate on it.
 import argparse
 import datetime
 import json
+import os
 import sys
 
 CATALOG = ".github/labview-ci/catalog.json"
@@ -32,12 +33,38 @@ CATALOG = ".github/labview-ci/catalog.json"
 _TOP_ORDER = ["schemaVersion", "version", "stableVersion", "betaVersion"]
 
 
-def _bump_patch(ver):
-    parts = ver.split(".")
-    if len(parts) != 3 or not all(p.isdigit() for p in parts):
-        raise SystemExit("::error::catalog version %r is not MAJOR.MINOR.PATCH" % ver)
-    parts[2] = str(int(parts[2]) + 1)
-    return ".".join(parts)
+def _next_patch_from_tags():
+    """Next patch version, derived from the published TAGS -- never from the file.
+
+    This used to read cat["version"] and add one. That inherits whatever the
+    catalog happens to say, so promoting against a regressed catalog would compute
+    a version that already exists and collide on the tag -- the same failure that
+    silently stopped releases after the 2026-07-30 downgrade. The tags are the
+    only authority on what has actually been published.
+    """
+    import re
+    import subprocess
+
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    try:
+        out = subprocess.run(
+            ["git", "tag", "--list", "v*.*.*"],
+            cwd=root, capture_output=True, text=True, timeout=30, check=True,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise SystemExit(
+            "::error::could not read git tags (%s); check out with fetch-depth: 0" % exc
+        )
+    pattern = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
+    versions = [
+        (int(m[1]), int(m[2]), int(m[3]))
+        for m in (pattern.match(l.strip()) for l in out.stdout.splitlines())
+        if m
+    ]
+    if not versions:
+        raise SystemExit("::error::no v<MAJOR>.<MINOR>.<PATCH> tags found")
+    major, minor, patch = max(versions)
+    return "%d.%d.%d" % (major, minor, patch + 1)
 
 
 def _releases(cat):
@@ -86,7 +113,7 @@ def main(argv=None):
         )
 
     top = str(cat.get("version", ""))
-    new_version = _bump_patch(top)
+    new_version = _next_patch_from_tags()
     date = args.date or datetime.datetime.utcnow().strftime("%Y-%m-%d")
 
     if args.unpromote:
