@@ -1,8 +1,17 @@
 {
   "schema": 1,
   "repo": "MIpetrov-NI/LabVIEW-CI-with-Containers",
-  "sha": "6acbe05a845dcc944350793a74e13ae51d71e4a4",
+  "sha": "48c821bb0ea20fbdd4fb4216af1b9b0302a26e5c",
   "revisions": [
+    {
+      "sha": "48c821bb0ea20fbdd4fb4216af1b9b0302a26e5c",
+      "short": "48c821b",
+      "message": "Release 4.16.4 [skip release]",
+      "author": "github-actions[bot]",
+      "date": "2026-09-16T19:01:17Z",
+      "project": false,
+      "dep_only": false
+    },
     {
       "sha": "6acbe05a845dcc944350793a74e13ae51d71e4a4",
       "short": "6acbe05",
@@ -891,15 +900,6 @@
       "message": "Docs: expand \u00a716.4 Unit Tests into a fully worked replication example",
       "author": "Elijah Kerry",
       "date": "2026-07-29T23:28:12Z",
-      "project": false,
-      "dep_only": false
-    },
-    {
-      "sha": "6ff3ab4fde1eda4ae8fb21e5989109e46884171f",
-      "short": "6ff3ab4",
-      "message": "Debug Run: simplify the dialog + choose operations inside the container (4.12.4)",
-      "author": "Elijah Kerry",
-      "date": "2026-07-24T00:12:39Z",
       "project": false,
       "dep_only": false
     },
