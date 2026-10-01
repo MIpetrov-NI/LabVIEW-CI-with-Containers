@@ -1,7 +1,7 @@
 {
-  "version": "win-c6221662a861",
+  "version": "win-c86cdf68fa36",
   "platform": "windows",
-  "manifest_url": "https://mipetrov-ni.github.io/LabVIEW-CI-with-Containers/workers/windows/win-c6221662a861/manifest.html",
-  "build_date": "2026-09-16T21:01:52Z",
-  "git_sha": "ac9cade31fd8e45a7f3c310f159c670bb7c10f28"
+  "manifest_url": "https://mipetrov-ni.github.io/LabVIEW-CI-with-Containers/workers/windows/win-c86cdf68fa36/manifest.html",
+  "build_date": "2026-10-01T11:53:52Z",
+  "git_sha": "48c821bb0ea20fbdd4fb4216af1b9b0302a26e5c"
 }
